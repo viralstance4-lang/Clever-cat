@@ -32,7 +32,7 @@ export default function RegisterPage() {
   const set = key => e => setForm(f => ({ ...f, [key]: e.target.value }))
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center px-4 py-16 overflow-hidden" style={{ background: 'linear-gradient(135deg,#FCFCFD,#D5C8EA)' }}>
+    <div className="relative min-h-screen flex items-center justify-center px-4 py-16 overflow-hidden" style={{ background: 'linear-gradient(135deg,#FCF8F0,#D5C8EA)' }}>
       <Doodles items={[
         { icon: 'pencil', className: 'top-[12%] left-[10%]', size: 18, delay: '0.2s' },
         { icon: 'star', className: 'top-[18%] right-[10%]', size: 18, delay: '0.7s' },

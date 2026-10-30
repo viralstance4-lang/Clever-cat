@@ -18,6 +18,7 @@ function normalizeBlog(blog) {
     category: blog.category?._id || blog.category || '',
     tags: (blog.tags || []).map(tag => (typeof tag === 'string' ? tag : tag._id)).filter(Boolean),
     featuredImage: blog.featuredImage || '',
+    gallery: blog.gallery || [],
     publishDate: blog.publishDate ? new Date(blog.publishDate).toISOString().slice(0, 16) : '',
     status: blog.status || 'draft',
     meta: { ...emptyMeta, ...(blog.meta || {}) },

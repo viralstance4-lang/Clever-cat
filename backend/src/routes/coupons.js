@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect, adminOnly } = require('../middleware/auth');
+const { protect, adminOnly, optionalAuth } = require('../middleware/auth');
 const {
   validateCoupon,
   getAutoApplyCoupon,
@@ -10,9 +10,11 @@ const {
   deleteCoupon,
 } = require('../controllers/couponController');
 
-// Public — frontend cart uses these
-router.post('/validate', validateCoupon);
-router.post('/auto-apply', getAutoApplyCoupon);
+// Public — frontend cart uses these. optionalAuth populates req.user when a
+// valid token is present (needed for firstOrderOnly coupons) without blocking
+// guest checkout.
+router.post('/validate', optionalAuth, validateCoupon);
+router.post('/auto-apply', optionalAuth, getAutoApplyCoupon);
 
 // Admin CRUD
 router.get('/',    protect, adminOnly, getAllCoupons);

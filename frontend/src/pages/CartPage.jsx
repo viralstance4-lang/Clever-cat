@@ -10,7 +10,10 @@ export default function CartPage() {
   const { items, removeItem, updateQty, changePackage, coupon, setCoupon } = useCartStore()
   const [couponCode, setCouponCode] = useState('')
   const [couponLoading, setCouponLoading] = useState(false)
-  const [shipSettings, setShipSettings] = useState({ prepaidFreeThreshold: 499, prepaidCharge: 79 })
+  const [shipSettings, setShipSettings] = useState({
+    prepaidFreeThreshold: 499, prepaidCharge: 79,
+    magazineCategorySlug: 'kids-magazine', magazineShippingCharge: 400,
+  })
 
   useEffect(() => {
     api.get('/settings/shipping')
@@ -19,15 +22,44 @@ export default function CartPage() {
   }, [])
 
   const subtotal  = items.reduce((s, i) => s + i.price * i.qty, 0)
+
+  // Auto-apply coupons (admin-configured "Auto" mode) — silently attach the best
+  // qualifying one as soon as the cart meets its threshold, no code needed. Never
+  // overrides a coupon the customer already applied (manually or auto) themselves.
+  useEffect(() => {
+    if (coupon || subtotal <= 0) return
+    api.post('/coupons/auto-apply', { subtotal })
+      .then(({ data }) => {
+        if (data.coupon) {
+          setCoupon({
+            code:               data.coupon.code,
+            discountType:       data.coupon.type,
+            discountValue:      data.coupon.rate,
+            maxDiscountAmount:  data.coupon.maxDiscountAmount || 0,
+            giftProduct:        data.coupon.giftProduct || null,
+          })
+          toast.success(`Coupon applied! ${data.coupon.description || `You saved ₹${data.coupon.discount}`}`)
+        }
+      })
+      .catch(() => {})
+  }, [subtotal, coupon])
   const discount  = coupon
     ? coupon.discountType === 'percentage'
       ? Math.min(Math.round(subtotal * coupon.discountValue / 100), coupon.maxDiscountAmount || Infinity)
       : coupon.discountValue
     : 0
   const freeThreshold = shipSettings.prepaidFreeThreshold
-  const shipping  = subtotal >= freeThreshold ? 0 : shipSettings.prepaidCharge
+
+  // Magazines (e.g. IQ Junior) ship separately — flat surcharge, never counted
+  // toward (or eligible for) the free-shipping-above-threshold offer.
+  const isMagazine = (item) => item.product?.categories?.includes(shipSettings.magazineCategorySlug)
+  const bookItems = items.filter(i => !isMagazine(i))
+  const hasMagazine = items.some(isMagazine)
+  const bookSubtotal = bookItems.reduce((s, i) => s + i.price * i.qty, 0)
+  const bookShipping = bookItems.length > 0 ? (bookSubtotal >= freeThreshold ? 0 : shipSettings.prepaidCharge) : 0
+  const shipping  = bookShipping + (hasMagazine ? shipSettings.magazineShippingCharge : 0)
   const total     = subtotal - discount + shipping
-  const shipProgress = Math.min(100, Math.round((subtotal / freeThreshold) * 100))
+  const shipProgress = Math.min(100, Math.round((bookSubtotal / freeThreshold) * 100))
 
   const applyCoupon = async () => {
     if (!couponCode.trim()) return
@@ -140,19 +172,24 @@ export default function CartPage() {
             <div className="card p-6 sticky top-24">
               <h3 className="font-serif text-xl font-bold text-forest-900 mb-5">Order Summary</h3>
 
-              {/* Free-shipping progress bar */}
+              {/* Free-shipping progress bar — books only; magazines always carry a flat surcharge */}
               <div className="mb-5">
                 <p className="text-xs text-forest-600 mb-2">
-                  {shipping === 0
-                    ? '🎉 You\'ve unlocked free delivery!'
-                    : <>Add <span className="font-semibold text-forest-900">₹{freeThreshold - subtotal}</span> more for free delivery</>}
+                  {bookShipping === 0
+                    ? '🎉 You\'ve unlocked free delivery on books!'
+                    : <>Add <span className="font-semibold text-forest-900">₹{freeThreshold - bookSubtotal}</span> more on books for free delivery</>}
                 </p>
                 <div className="w-full h-2 bg-forest-100 rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all duration-500 ${shipping === 0 ? 'bg-green-500' : 'bg-gold-gradient'}`}
+                    className={`h-full rounded-full transition-all duration-500 ${bookShipping === 0 ? 'bg-green-500' : 'bg-gold-gradient'}`}
                     style={{ width: `${shipProgress}%` }}
                   />
                 </div>
+                {hasMagazine && (
+                  <p className="text-xs text-forest-400 mt-1.5">
+                    Magazines ship separately for a flat ₹{shipSettings.magazineShippingCharge}.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-3 mb-5">

@@ -42,7 +42,7 @@ const deleteDiskVideo = (url) => {
 exports.getActiveShopVideos = async (_req, res) => {
   const videos = await ShopVideo.find({ isActive: true })
     .sort({ displayOrder: 1, createdAt: -1 })
-    .populate('product', 'name slug price comparePrice images');
+    .populate('products', 'name slug price comparePrice images');
 
   res.json({ success: true, count: videos.length, videos: videos.map(withThumbnail) });
 };
@@ -51,19 +51,24 @@ exports.getActiveShopVideos = async (_req, res) => {
 exports.getAllShopVideos = async (_req, res) => {
   const videos = await ShopVideo.find()
     .sort({ displayOrder: 1, createdAt: -1 })
-    .populate('product', 'name slug price images');
+    .populate('products', 'name slug price images');
 
   res.json({ success: true, count: videos.length, videos: videos.map(withThumbnail) });
 };
 
+// Multipart form fields with the same name arrive as a single string (one
+// value) or an array (2+ values) depending on the client — normalize to array.
+const toArray = (v) => (v === undefined ? [] : Array.isArray(v) ? v : [v]);
+
 // ─── POST /api/shop-videos ───────────────────────────────────────────────────────
 exports.createShopVideo = async (req, res) => {
-  const { title, badge, views, product, displayOrder, isActive, video: videoUrl } = req.body;
+  const { title, badge, views, products, displayOrder, isActive, video: videoUrl } = req.body;
   if (!req.file && !videoUrl) {
     return res.status(400).json({ success: false, message: 'Video file is required' });
   }
-  if (!product) {
-    return res.status(400).json({ success: false, message: 'A tagged product is required' });
+  const productIds = toArray(products);
+  if (productIds.length === 0) {
+    return res.status(400).json({ success: false, message: 'At least one tagged product is required' });
   }
 
   const video = req.file ? fileToVideo(req.file, req) : { url: videoUrl, publicId: null };
@@ -75,12 +80,12 @@ exports.createShopVideo = async (req, res) => {
     views: views ? Number(views) : 0,
     videoUrl: video.url,
     videoPublicId: video.publicId,
-    product,
+    products: productIds,
     displayOrder: displayOrder !== undefined ? Number(displayOrder) : 0,
     isActive: isActive === undefined ? true : (isActive === 'true' || isActive === true),
   });
 
-  const populated = await shopVideo.populate('product', 'name slug price images');
+  const populated = await shopVideo.populate('products', 'name slug price images');
   res.status(201).json({ success: true, video: withThumbnail(populated) });
 };
 
@@ -89,7 +94,7 @@ exports.updateShopVideo = async (req, res) => {
   const shopVideo = await ShopVideo.findById(req.params.id);
   if (!shopVideo) return res.status(404).json({ success: false, message: 'Shop video not found' });
 
-  const { title, badge, views, product, displayOrder, isActive, video: videoUrl } = req.body;
+  const { title, badge, views, products, displayOrder, isActive, video: videoUrl } = req.body;
 
   if (req.file) {
     await destroyCloudinaryVideo(shopVideo.videoPublicId);
@@ -106,12 +111,18 @@ exports.updateShopVideo = async (req, res) => {
   if (title !== undefined) shopVideo.title = title;
   if (badge !== undefined) shopVideo.badge = badge;
   if (views !== undefined) shopVideo.views = Number(views);
-  if (product !== undefined) shopVideo.product = product;
+  if (products !== undefined) {
+    const productIds = toArray(products);
+    if (productIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'At least one tagged product is required' });
+    }
+    shopVideo.products = productIds;
+  }
   if (displayOrder !== undefined) shopVideo.displayOrder = Number(displayOrder);
   if (isActive !== undefined) shopVideo.isActive = (isActive === 'true' || isActive === true);
 
   await shopVideo.save();
-  const populated = await shopVideo.populate('product', 'name slug price images');
+  const populated = await shopVideo.populate('products', 'name slug price images');
   res.json({ success: true, video: withThumbnail(populated) });
 };
 
@@ -139,6 +150,6 @@ exports.reorderShopVideos = async (req, res) => {
     order.map(({ _id, displayOrder }) => ShopVideo.findByIdAndUpdate(_id, { displayOrder }))
   );
 
-  const videos = await ShopVideo.find().sort({ displayOrder: 1, createdAt: -1 }).populate('product', 'name slug price images');
+  const videos = await ShopVideo.find().sort({ displayOrder: 1, createdAt: -1 }).populate('products', 'name slug price images');
   res.json({ success: true, videos: videos.map(withThumbnail) });
 };

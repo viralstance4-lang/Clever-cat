@@ -7,9 +7,12 @@ const shopVideoSchema = new mongoose.Schema(
     views: { type: Number, default: 0 },                 // display-only counter, e.g. shown as "3.8k"
 
     videoUrl:      { type: String, required: true },
-    videoPublicId: { type: String, required: true },
+    videoPublicId: { type: String, default: null }, // null for videos picked from the Media Library rather than freshly uploaded
 
-    product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+    products: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+      validate: v => Array.isArray(v) && v.length > 0,
+    },
 
     displayOrder: { type: Number, default: 0 },
     isActive:     { type: Boolean, default: true },

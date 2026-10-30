@@ -56,6 +56,7 @@ exports.createOrder = async (req, res) => {
   // Validate products & calculate totals
   let subtotal = 0;
   const orderItems = [];
+  const itemsForShipping = [];
 
   for (const item of items) {
     if (!mongoose.Types.ObjectId.isValid(item.product)) {
@@ -97,10 +98,12 @@ exports.createOrder = async (req, res) => {
       ...packageFields,
     });
     subtotal += unitPrice * item.quantity;
+    itemsForShipping.push({ categories: product.categories || [], lineTotal: unitPrice * item.quantity });
   }
 
-  // Dynamic shipping from DB settings (falls back to defaults if no settings doc)
-  const shippingCharge = await calculateShipping(subtotal, paymentMethod);
+  // Dynamic shipping from DB settings (falls back to defaults if no settings doc).
+  // Magazines ship separately from books — see calculateShipping for the rules.
+  const shippingCharge = await calculateShipping(itemsForShipping, paymentMethod);
 
   // Gift wrap — flat admin-configured fee, only applied when the customer opts in
   // and the store has gift wrap enabled (re-check server-side, don't trust the client price).
@@ -114,7 +117,9 @@ exports.createOrder = async (req, res) => {
   }
 
   // Dynamic coupon from DB (increments usedCount on success)
-  const { discount, giftProduct, couponType, applicationMode } = await applyCouponToOrder(couponCode, subtotal);
+  const { discount, giftProduct, couponType, applicationMode } = await applyCouponToOrder(
+    couponCode, subtotal, { userId: req.user?.id, email: orderEmail }
+  );
 
   if (giftProduct) {
     orderItems.push({
@@ -138,7 +143,11 @@ exports.createOrder = async (req, res) => {
     subtotal,
     shippingCharge,
     discount,
-    couponCode,
+    // Only record the coupon if it was actually accepted (couponType is set
+    // on success) — otherwise a rejected code (e.g. firstOrderOnly blocked on
+    // a repeat order) stays attached to the order even with discount: 0,
+    // which looks like the coupon "worked" everywhere it's displayed.
+    couponCode:            couponType ? couponCode : undefined,
     couponType:            couponType || undefined,
     couponApplicationMode: applicationMode || undefined,
     total,
@@ -421,6 +430,7 @@ exports.getDashboardStats = async (req, res) => {
     topProducts,
     categorySales,
     shippingAgg,
+    lowStockProducts,
   ] = await Promise.all([
     Order.countDocuments({ paymentVerified: true }),
     Order.countDocuments({ paymentVerified: true, createdAt: { $gte: today } }),
@@ -466,6 +476,12 @@ exports.getDashboardStats = async (req, res) => {
       { $match: { paymentVerified: true } },
       { $group: { _id: '$shippingStatus', count: { $sum: 1 } } },
     ]),
+
+    // Products running low on stock (below 10 units)
+    Product.find({ isActive: true, stock: { $lt: 10 } })
+      .sort({ stock: 1 })
+      .limit(10)
+      .select('name stock images'),
   ]);
 
   const shippingCounts = Object.fromEntries(shippingAgg.map(s => [s._id || 'not_created', s.count]));
@@ -493,5 +509,6 @@ exports.getDashboardStats = async (req, res) => {
     topProducts,
     categorySales,
     shippingStats,
+    lowStockProducts,
   });
 };

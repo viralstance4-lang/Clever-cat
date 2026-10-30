@@ -6,13 +6,16 @@
  *
  * items: [{ src: '/red-plane.webp', className: 'top-4 left-4 w-16', delay?: '0s', animate?: 'bob'|'float-icon'|'none' }]
  */
+import { cldOptimize } from '../../utils/cloudinary'
+
 export default function GraphicDoodles({ items }) {
   return (
     <>
       {items.map((item, i) => (
         <img
           key={i}
-          src={item.src}
+          src={cldOptimize(item.src, 200)}
+          loading="lazy"
           alt=""
           aria-hidden="true"
           className={`absolute pointer-events-none select-none drop-shadow-sm ${item.animate !== 'none' ? `animate-${item.animate || 'bob'}` : ''} ${item.className || ''}`}

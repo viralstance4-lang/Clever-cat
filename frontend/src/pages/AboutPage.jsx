@@ -1,17 +1,18 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import Doodles from '../components/ui/Doodles'
+import { cldOptimize } from '../utils/cloudinary'
 
 const VALUES = [
-  { icon: '📚', title: 'Curated, Not Copied',   desc: 'Every book and activity kit is hand-picked and age-tagged — nothing added just to pad the catalogue.' },
-  { icon: '🎨', title: 'Built to Last',          desc: 'Sturdy pages, safe materials, and colours that survive real play, not just a photo shoot.' },
-  { icon: '🌟', title: 'Age-Appropriate',        desc: 'From board books for toddlers to brain-boosters for tweens — everything is sorted by the age it suits.' },
-  { icon: '💛', title: 'Parents First',          desc: 'Clear age labels, honest descriptions, and a support team that actually answers.' },
+  { iconImg: 'https://res.cloudinary.com/eob3oguc/image/upload/v1790766943/clevercat/media/j5hvocgmmoyn706hbhfc.png', title: 'Curiosity',   desc: 'We create products that inspire children to explore, discover and ask questions.' },
+  { iconImg: 'https://res.cloudinary.com/eob3oguc/image/upload/v1790767181/clevercat/media/ahojzkyjvqgvh0kgzc99.png', title: 'Creativity',  desc: 'We bring imagination and originality to everything we create.' },
+  { iconImg: 'https://res.cloudinary.com/eob3oguc/image/upload/v1790767181/clevercat/media/zu3dimc6awxg2x1w4hey.png', title: 'Quality',     desc: 'We strive for high standards in every book and product we create.' },
+  { iconImg: 'https://res.cloudinary.com/eob3oguc/image/upload/v1790767369/clevercat/media/kyqeltg8jhhldrt0vox7.png', title: 'Innovation',  desc: 'We continuously explore better ideas, formats and ways to engage young learners.' },
 ]
 
 const TEAM = [
-  { name: 'Aditi Rao', role: 'Founder & Curator', img: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400' },
-  { name: 'Rohan Mehta', role: 'Head of Product Selection', img: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400' },
+  { name: 'Dilpreet Batra', role: 'Founder and Curator', img: 'https://res.cloudinary.com/eob3oguc/image/upload/v1790582008/clevercat/media/wofwzybnryfirc4bbhxn.webp' },
+  { name: 'Prabhdit Batra', role: 'Managing Director', img: 'https://res.cloudinary.com/eob3oguc/image/upload/v1790582008/clevercat/media/jkduildtcwvirfadgj3l.webp' },
 ]
 
 export default function AboutPage() {
@@ -29,10 +30,10 @@ export default function AboutPage() {
         <div className="relative">
           <span className="badge-gold mb-4 inline-block">Our Story</span>
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4" style={{ fontFamily: "'PP Pangram Sans Rounded',sans-serif" }}>
-            Big Ideas for<br />Little Minds
+           From printing stories to creating our own.
           </h1>
           <p className="text-forest-300 max-w-2xl mx-auto text-lg">
-            Clever Cat was founded with one mission — to make beautifully designed books and learning products easy for every parent to find and trust.
+            To create and bring international-quality books and learning products to children across India.
           </p>
         </div>
       </div>
@@ -41,36 +42,64 @@ export default function AboutPage() {
       <section className="py-16 px-4 max-w-6xl mx-auto">
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div>
-            <span className="badge-green mb-4 inline-block">The Beginning</span>
-            <h2 className="section-title mb-5">Why We Started Clever Cat</h2>
+            <span className="badge-green mb-4 inline-block">About Us</span>
+            <h2 className="section-title mb-5">Born from experience. Created for India.</h2>
             <div className="space-y-4 text-forest-600 leading-relaxed">
-              <p>Clever Cat started with a simple frustration — shopping for children's books online meant scrolling through hundreds of listings with no real way to tell what suited a 3-year-old versus an 8-year-old.</p>
-              <p>We set out to build a store where every product is chosen deliberately, tagged by age, and organised the way a parent actually shops — not just an endless catalogue.</p>
-              <p>Today, Clever Cat brings together story books, activity books, puzzles, flash cards and craft kits — all in one colourful, easy-to-browse place.</p>
+              <p>Established in 1955, Batra Art Press has grown over seven decades into a diverse print and publishing business with expertise across the print ecosystem.</p>
+              <p className="font-semibold text-forest-900">Our International Experience</p>
+              <p>For more than a decade, we have been creating children's books and content for international markets.</p>
+              <p>Our children's titles have reached 30+ countries, with a portfolio of 1,000+ titles sold internationally. Some of our best-selling titles have sold over 100,000 copies, giving us first-hand experience of creating products for different markets and audiences.</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <img src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600" alt="Children reading" className="rounded-2xl w-full h-80 object-cover" />
-            <img src="https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=600" alt="Storybook collection" className="rounded-2xl w-full h-80 object-cover mt-6" />
+          <div>
+            <img src={cldOptimize('https://res.cloudinary.com/eob3oguc/image/upload/v1791184254/clevercat/media/solshj5qmuoj84rws6k2.png', 700)} alt="Clever Cat with children" loading="lazy" className="rounded-2xl w-full h-auto object-contain" />
           </div>
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="bg-forest-900 py-14 px-4">
-        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-          {[
-            { num: '500+',  label: 'Books & Products' },
-            { num: '4.8★',  label: 'Average Rating' },
-            { num: '6',     label: 'Age Groups Covered' },
-            { num: '100%',  label: 'Original Products' },
-          ].map(s => (
-            <div key={s.label}>
-              <p className="text-3xl font-bold text-gold-accent mb-1" style={{ fontFamily: "'PP Pangram Sans Rounded',sans-serif" }}>{s.num}</p>
-              <p className="text-forest-300 text-sm">{s.label}</p>
+      {/* Vision */}
+      <section className="py-16 px-4 bg-forest-50">
+        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-center">
+          <img src={cldOptimize('https://res.cloudinary.com/eob3oguc/image/upload/v1790582008/clevercat/media/wofwzybnryfirc4bbhxn.webp', 700)} alt="Dilpreet Batra, Founder and Curator" loading="lazy" className="rounded-2xl w-full h-96 object-cover object-top" />
+          <div>
+            <span className="badge-green mb-4 inline-block">The Vision</span>
+            <h2 className="section-title mb-5">The Vision Behind Clever Cat</h2>
+            <div className="space-y-4 text-forest-600 leading-relaxed">
+              <p>Clever Cat is conceived and led by Dilpreet Batra, Founder and Curator, whose publishing experience and understanding of international children's markets shape the vision behind the brand.</p>
+              <p>At Clever Cat, we envision learning experiences that nurture curiosity, allow creativity to flourish and build confidence in every child.</p>
+              <p>At the heart of Clever Cat is a simple belief: <strong>every child is clever in their own way.</strong> Each child has individual interests, ideas and ways of making sense of the world. We believe children's learning products should celebrate these differences, giving every child the freedom to explore, create and learn in their own way.</p>
             </div>
-          ))}
+          </div>
         </div>
+      </section>
+
+      {/* Expertise */}
+      <section className="py-16 px-4 max-w-3xl mx-auto text-center">
+        <span className="badge-gold mb-3 inline-block">Our Expertise</span>
+        <h2 className="section-title mb-6">A Rare Combination</h2>
+        <div className="space-y-4 text-forest-600 leading-relaxed">
+          <p>What makes Clever Cat unique is the combination of print expertise and creative expertise.</p>
+          <p>Decades of experience in print and publishing give us deep knowledge of formats, materials and production techniques, while our team knows how to develop great content and design and bring innovative ideas to life on the page.</p>
+          <p>Understanding not only how to develop great content and design, but also how to bring innovative ideas to life through print, formats, materials and production techniques — that combination is what sets us apart.</p>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-4 mt-10 max-w-2xl mx-auto">
+          <video src="https://res.cloudinary.com/eob3oguc/video/upload/v1791188085/clevercat/media/wfq1kabpbhkec5bywcle.mp4"
+            className="w-full rounded-2xl" controls autoPlay muted loop playsInline />
+          <video src="https://res.cloudinary.com/eob3oguc/video/upload/v1791188092/clevercat/media/anw2hivdjttoeyafhfby.mp4"
+            className="w-full rounded-2xl" controls autoPlay muted loop playsInline />
+        </div>
+      </section>
+
+      {/* Our Mission */}
+      <section className="py-16 px-4 bg-forest-50 text-center">
+        <div className="max-w-3xl mx-auto">
+          <span className="badge-gold mb-4 inline-block">What Drives Us</span>
+          <h2 className="section-title mb-5">Our Mission</h2>
+          <div className="space-y-4 text-forest-600 leading-relaxed">
+            <p>To bring thoughtfully curated, international-quality children's learning products to children across India.</p>
+            <p>We believe every child deserves access to exceptional learning experiences through products that inspire exploration, nurture imagination and make discovery a joy.</p>
+          </div>
+        </div>  
       </section>
 
       {/* Values */}
@@ -82,7 +111,9 @@ export default function AboutPage() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {VALUES.map(v => (
             <div key={v.title} className="card p-6 text-center">
-              <div className="text-4xl mb-4">{v.icon}</div>
+              <div className="mb-4 flex justify-center">
+                {v.iconImg ? <img src={cldOptimize(v.iconImg, 128)} alt={v.title} loading="lazy" className="w-16 h-16 object-contain" /> : <span className="text-4xl">{v.icon}</span>}
+              </div>
               <h3 className="font-semibold text-forest-900 mb-2">{v.title}</h3>
               <p className="text-forest-500 text-sm leading-relaxed">{v.desc}</p>
             </div>
@@ -90,26 +121,18 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* How we pick products */}
-      <section className="py-16 px-4 bg-forest-50">
-        <div className="max-w-4xl mx-auto text-center mb-10">
-          <span className="badge-green mb-3 inline-block">Our Process</span>
-          <h2 className="section-title">How a Product Makes the Cut</h2>
-        </div>
-        <div className="max-w-4xl mx-auto grid md:grid-cols-4 gap-6">
+      {/* Stats */}
+      <section className="bg-forest-900 py-14 px-4">
+        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           {[
-            { step: '01', title: 'Age-Appropriate', desc: 'We only list products with a clear, honest age recommendation' },
-            { step: '02', title: 'Quality Check', desc: 'Materials, print quality and durability are checked before listing' },
-            { step: '03', title: 'Parent Reviewed', desc: 'Where possible, products are tried and reviewed by real parents' },
-            { step: '04', title: 'Gift-Ready', desc: 'Every order can be gift-wrapped at checkout for a small fee' },
+            { num: '1000+',  label: 'Books & Products' },
+            { num: '4.8★',  label: 'Average Rating' },
+            { num: '0-10',     label: 'Age Groups Covered' },
+            { num: '100%',  label: 'Original Products' },
           ].map(s => (
-            <div key={s.step} className="text-center">
-              <div className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center text-white font-bold"
-                style={{ background: 'linear-gradient(135deg,#4F29A3,#1D1538)' }}>
-                {s.step}
-              </div>
-              <h4 className="font-semibold text-forest-900 mb-2 text-sm">{s.title}</h4>
-              <p className="text-forest-500 text-xs leading-relaxed">{s.desc}</p>
+            <div key={s.label}>
+              <p className="text-3xl font-bold text-gold-accent mb-1" style={{ fontFamily: "'PP Pangram Sans Rounded',sans-serif" }}>{s.num}</p>
+              <p className="text-forest-300 text-sm">{s.label}</p>
             </div>
           ))}
         </div>
@@ -122,11 +145,23 @@ export default function AboutPage() {
         <div className="flex flex-wrap justify-center gap-8">
           {TEAM.map(m => (
             <div key={m.name} className="text-center">
-              <img src={m.img} alt={m.name} className="w-24 h-24 rounded-full object-cover mx-auto mb-3 border-4 border-forest-100" />
+              <img src={cldOptimize(m.img, 320)} alt={m.name} loading="lazy" className="w-64 h-64 rounded-full object-cover object-top mx-auto mb-4 border-4 border-forest-100" />
               <p className="font-semibold text-forest-900">{m.name}</p>
               <p className="text-forest-500 text-sm">{m.role}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Looking Ahead */}
+      <section className="py-16 px-4 bg-forest-50 text-center">
+        <div className="max-w-3xl mx-auto">
+          <span className="badge-green mb-4 inline-block">Looking Ahead</span>
+          <h2 className="section-title mb-5">Beyond Books</h2>
+          <div className="space-y-4 text-forest-600 leading-relaxed">
+            <p>Clever Cat is growing beyond books into a wider world of children's products and experiences.</p>
+            <p>Our journey is about continually discovering new ideas, creating better products and bringing international-quality children's content to more families across India.</p>
+          </div>
         </div>
       </section>
 

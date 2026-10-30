@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { Clock } from 'lucide-react'
 import api from '../api'
+import { cldOptimize } from '../utils/cloudinary'
 
 export default function BlogDetailPage() {
   const { slug } = useParams()
@@ -23,7 +24,7 @@ export default function BlogDetailPage() {
 
   return (
     <div className="max-w-4xl mx-auto py-12 px-4">
-      {post.featuredImage && <img src={post.featuredImage} alt={post.title} className="w-full h-72 object-cover rounded mb-6" />}
+      {post.featuredImage && <img src={cldOptimize(post.featuredImage, 900)} alt={post.title} className="w-full h-72 object-cover rounded mb-6" />}
       <h1 className="text-3xl font-serif font-bold mb-2">{post.title}</h1>
       <div className="flex flex-wrap items-center gap-3 text-sm text-forest-500 mb-6"><Clock size={14} /> {post.readTime} · {new Date(post.publishDate || post.createdAt).toLocaleDateString()}</div>
       <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: post.content }} />

@@ -21,13 +21,18 @@ exports.getPriceRange = async (req, res) => {
 
 // ─── POST /api/price-ranges ──────────────────────────────────────────────────────
 exports.createPriceRange = async (req, res) => {
-  const { label, maxPrice, displayOrder, isActive } = req.body;
+  const { label, minPrice, maxPrice, imageUrl, displayOrder, isActive } = req.body;
   if (!label?.trim()) return res.status(400).json({ success: false, message: 'Label is required' });
   if (!(Number(maxPrice) > 0)) return res.status(400).json({ success: false, message: 'Max price must be greater than 0' });
+  const min = minPrice !== undefined ? Number(minPrice) : 0;
+  if (min < 0) return res.status(400).json({ success: false, message: 'Min price cannot be negative' });
+  if (min >= Number(maxPrice)) return res.status(400).json({ success: false, message: 'Min price must be less than max price' });
 
   const priceRange = await PriceRange.create({
     label: label.trim(),
+    minPrice: min,
     maxPrice: Number(maxPrice),
+    imageUrl: imageUrl || '',
     displayOrder: displayOrder !== undefined ? Number(displayOrder) : 0,
     isActive: isActive === undefined ? true : (isActive === 'true' || isActive === true),
   });
@@ -40,10 +45,17 @@ exports.updatePriceRange = async (req, res) => {
   const priceRange = await PriceRange.findById(req.params.id);
   if (!priceRange) return res.status(404).json({ success: false, message: 'Price range not found' });
 
-  const { label, maxPrice, displayOrder, isActive } = req.body;
+  const { label, minPrice, maxPrice, imageUrl, displayOrder, isActive } = req.body;
+
+  const nextMin = minPrice !== undefined ? Number(minPrice) : priceRange.minPrice;
+  const nextMax = maxPrice !== undefined ? Number(maxPrice) : priceRange.maxPrice;
+  if (nextMin < 0) return res.status(400).json({ success: false, message: 'Min price cannot be negative' });
+  if (nextMin >= nextMax) return res.status(400).json({ success: false, message: 'Min price must be less than max price' });
 
   if (label !== undefined) priceRange.label = label.trim();
-  if (maxPrice !== undefined) priceRange.maxPrice = Number(maxPrice);
+  if (minPrice !== undefined) priceRange.minPrice = nextMin;
+  if (maxPrice !== undefined) priceRange.maxPrice = nextMax;
+  if (imageUrl !== undefined) priceRange.imageUrl = imageUrl;
   if (displayOrder !== undefined) priceRange.displayOrder = Number(displayOrder);
   if (isActive !== undefined) priceRange.isActive = (isActive === 'true' || isActive === true);
 

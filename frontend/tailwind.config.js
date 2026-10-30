@@ -34,11 +34,11 @@ export default {
           600: '#4F29A3',
           700: '#42307B',   // brand dark purple
           800: '#2C1F55',
-          900: '#1D1538',
+          900: '#3D1868',
         },
         cream: {
           50:  '#FFFFFF',
-          100: '#FCFCFD',   // main background
+          100: '#FCF8F0',   // main background — brand cream
           200: '#F5F3F9',   // card background
           300: '#EAE7F3',
           400: '#DBD5EB',
@@ -68,12 +68,12 @@ export default {
       backgroundImage: {
         'gold-gradient':   'linear-gradient(135deg, #D59051 0%, #D77E2E 50%, #8C4F18 100%)',
         'green-gradient':  'linear-gradient(135deg, #611CD0 0%, #42307B 100%)',
-        'hero-gradient':   'linear-gradient(135deg, #FCFCFD 0%, #F7F4FA 50%, #D5C8EA 100%)',
+        'hero-gradient':   'linear-gradient(135deg, #FCF8F0 0%, #F7F4FA 50%, #D5C8EA 100%)',
       },
       boxShadow: {
         'gold':   '0 4px 20px rgba(215, 126, 46, 0.25)',
         'gold-lg':'0 8px 40px rgba(215, 126, 46, 0.35)',
-        'card':   '0 2px 16px rgba(29, 21, 56, 0.08)',
+        'card':   '0 2px 16px rgba(61, 24, 104, 0.08)',
       },
     },
   },

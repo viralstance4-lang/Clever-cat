@@ -38,6 +38,7 @@ function ShippingPreview({ form }) {
   const codThreshold = Number(form.codThreshold) || 0
   const codBelow = Number(form.codChargeBelow) || 0
   const codAbove = Number(form.codChargeAbove) || 0
+  const magazineCharge = Number(form.magazineShippingCharge) || 0
 
   const examples = [
     { label: `Prepaid order below ${fmtINR(prepaidFree)}`, value: prepaidCharge > 0 ? fmtINR(prepaidCharge) : 'Free' },
@@ -48,6 +49,7 @@ function ShippingPreview({ form }) {
     ] : [
       { label: 'Cash on Delivery', value: 'Disabled' },
     ]),
+    { label: 'Order containing a magazine (any amount)', value: `+${fmtINR(magazineCharge)}` },
   ]
 
   return (
@@ -73,6 +75,7 @@ export default function AdminSettings() {
     prepaidFreeThreshold: '499', prepaidCharge: '79',
     codEnabled: true, codThreshold: '499', codChargeBelow: '79', codChargeAbove: '20',
     giftWrapEnabled: true, giftWrapPrice: '49',
+    magazineShippingCharge: '400',
   })
   const [savingShipping, setSavingShipping] = useState(false)
 
@@ -93,6 +96,7 @@ export default function AdminSettings() {
         codChargeAbove: String(sh.codChargeAbove),
         giftWrapEnabled: sh.giftWrapEnabled !== false,
         giftWrapPrice: String(sh.giftWrapPrice ?? 49),
+        magazineShippingCharge: String(sh.magazineShippingCharge ?? 400),
       })
     }).catch(() => toast.error('Failed to load settings'))
       .finally(() => setLoading(false))
@@ -135,6 +139,7 @@ export default function AdminSettings() {
         codChargeAbove: Number(shipping.codChargeAbove),
         giftWrapEnabled: shipping.giftWrapEnabled,
         giftWrapPrice: Number(shipping.giftWrapPrice),
+        magazineShippingCharge: Number(shipping.magazineShippingCharge),
       })
       toast.success('Shipping settings updated')
     } catch (err) {
@@ -214,6 +219,16 @@ export default function AdminSettings() {
                 </Field>
               </div>
             )}
+          </div>
+
+          <div className="border-t border-forest-100 pt-4">
+            <h3 className="text-xs font-semibold text-forest-400 uppercase tracking-wider mb-2">Magazines (e.g. IQ Junior)</h3>
+            <Field label="Flat Shipping Charge (₹)">
+              <input type="number" min="0" value={shipping.magazineShippingCharge} onChange={e => setShipping(s => ({ ...s, magazineShippingCharge: e.target.value }))} className="input max-w-xs" />
+            </Field>
+            <p className="text-xs text-forest-400 mt-1.5">
+              Applied once per order whenever the cart contains a "Kids Magazine" category product — on top of any book shipping/COD charge. The free-shipping-above-threshold offer never applies to magazines.
+            </p>
           </div>
 
           <ShippingPreview form={shipping} />

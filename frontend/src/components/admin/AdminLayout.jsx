@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Tag, Settings,
-  Menu, LogOut, Home, Layers, HelpCircle, Star, FileText, Image, Aperture, Images, Sparkles, CreditCard, Mail, Film, Quote, IndianRupee, Megaphone,
+  Menu, LogOut, Home, Layers, HelpCircle, Star, FileText, Image, Aperture, Images, Sparkles, CreditCard, Mail, Film, Quote, IndianRupee, Megaphone, LayoutTemplate,
 } from 'lucide-react'
 import { io } from 'socket.io-client'
 import useAuthStore from '../../store/authStore'
@@ -14,6 +14,7 @@ const SOCKET_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api')
 
 const navItems = [
   { to: '/admin/dashboard',  label: 'Dashboard',  icon: LayoutDashboard, end: true },
+  { to: '/admin/homepage-builder', label: 'Homepage Builder', icon: LayoutTemplate },
   { to: '/admin/announcements', label: 'Announcement Bar', icon: Megaphone },
   { to: '/admin/banners',    label: 'Homepage Banners', icon: Images },
   { to: '/admin/concerns',   label: 'Shop by Age', icon: Sparkles },

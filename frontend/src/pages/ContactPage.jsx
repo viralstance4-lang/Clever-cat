@@ -48,8 +48,8 @@ export default function ContactPage() {
               </div>
               <div>
                 <h3 className="font-semibold text-forest-900 mb-1">Call / WhatsApp</h3>
-                <a href="tel:+919876543210" className="text-forest-600 hover:text-forest-800 text-sm block">+91 98765 43210</a>
-                <p className="text-xs text-forest-400 mt-1">Mon–Sat, 9 AM – 7 PM</p>
+                <a href="tel:+919218171625" className="text-forest-600 hover:text-forest-800 text-sm block">+91 92181 71625</a>
+                <p className="text-xs text-forest-400 mt-1">Mon–Sat, 10 AM – 7 PM</p>
               </div>
             </div>
             <div className="card p-5 flex gap-4">
@@ -58,7 +58,7 @@ export default function ContactPage() {
               </div>
               <div>
                 <h3 className="font-semibold text-forest-900 mb-1">Email Us</h3>
-                <a href="mailto:clevercat@gmail.com" className="text-forest-600 hover:text-forest-800 text-sm block">clevercat@gmail.com</a>
+                <a href="mailto:coordination@theclevercat.in" className="text-forest-600 hover:text-forest-800 text-sm block">coordination@theclevercat.in</a>
                 <p className="text-xs text-forest-400 mt-1">Response within 24 hours</p>
               </div>
             </div>
@@ -69,7 +69,7 @@ export default function ContactPage() {
               <div>
                 <h3 className="font-semibold text-forest-900 mb-1">Business Hours</h3>
                 <p className="text-forest-600 text-sm">Monday – Saturday</p>
-                <p className="text-forest-600 text-sm">9:00 AM – 7:00 PM IST</p>
+                <p className="text-forest-600 text-sm">10:00 AM – 7:00 PM IST</p>
               </div>
             </div>
             <div className="card p-5 flex gap-4">
@@ -78,7 +78,7 @@ export default function ContactPage() {
               </div>
               <div>
                 <h3 className="font-semibold text-forest-900 mb-1">WhatsApp Chat</h3>
-                <a href="https://wa.me/919876543210" target="_blank" rel="noreferrer"
+                <a href="https://wa.me/919218171625" target="_blank" rel="noreferrer"
                   className="text-forest-600 hover:text-green-600 text-sm">Chat with us on WhatsApp</a>
               </div>
             </div>

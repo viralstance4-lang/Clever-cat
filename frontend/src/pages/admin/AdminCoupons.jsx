@@ -8,6 +8,7 @@ const emptyCoupon = {
   code: '', description: '', discountType: 'percentage', discountValue: '',
   giftProduct: null, applicationMode: 'manual',
   minOrderValue: '0', maxDiscountAmount: '', usageLimit: '0', expiresAt: '', isActive: true,
+  firstOrderOnly: false,
 }
 
 function GiftProductPicker({ value, onChange }) {
@@ -111,6 +112,7 @@ function CouponModal({ coupon, onClose, onSaved }) {
         usageLimit: Number(form.usageLimit) || 0,
         expiresAt: form.expiresAt || undefined,
         isActive: form.isActive,
+        firstOrderOnly: form.firstOrderOnly,
         giftProduct: form.discountType === 'free_gift' ? form.giftProduct?._id : undefined,
       }
       if (isEdit) {
@@ -204,10 +206,21 @@ function CouponModal({ coupon, onClose, onSaved }) {
             </div>
           </div>
 
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" name="isActive" checked={form.isActive} onChange={handleChange} className="accent-forest-800 w-4 h-4" />
-            <span className="text-sm text-forest-700">Active</span>
-          </label>
+          <div className="flex items-center gap-6">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="isActive" checked={form.isActive} onChange={handleChange} className="accent-forest-800 w-4 h-4" />
+              <span className="text-sm text-forest-700">Active</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="firstOrderOnly" checked={form.firstOrderOnly} onChange={handleChange} className="accent-forest-800 w-4 h-4" />
+              <span className="text-sm text-forest-700">First order only</span>
+            </label>
+          </div>
+          {form.firstOrderOnly && (
+            <p className="text-xs text-forest-400 -mt-2">
+              Only customers with no previous orders (by account, or by email for guest checkout) can use this coupon.
+            </p>
+          )}
 
           <button type="submit" disabled={saving} className="btn-gold w-full justify-center text-sm">
             {saving ? <Loader2 size={16} className="animate-spin" /> : null} {isEdit ? 'Update Coupon' : 'Create Coupon'}
@@ -334,7 +347,14 @@ export default function AdminCoupons() {
                 const expired = c.expiresAt && new Date(c.expiresAt) < new Date()
                 return (
                   <tr key={c._id} className="border-b border-forest-50 hover:bg-forest-50/50 transition-colors">
-                    <td className="px-4 py-3 font-mono font-semibold text-forest-900">{c.code}</td>
+                    <td className="px-4 py-3 font-mono font-semibold text-forest-900">
+                      <div className="flex items-center gap-1.5">
+                        {c.code}
+                        {c.firstOrderOnly && (
+                          <span title="First order only" className="bg-amber-100 text-amber-700 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">1st</span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-forest-600 max-w-[180px] truncate">{c.description || '—'}</td>
                     <td className="px-4 py-3 text-forest-700">
                       <span className="flex items-center gap-1.5">

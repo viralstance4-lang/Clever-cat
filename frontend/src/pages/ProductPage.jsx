@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ShoppingCart, Heart, Star, Minus, Plus, Package, ChevronDown, ZoomIn, ZoomOut, PlayCircle, ClipboardList, Sparkles, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ShoppingCart, Heart, Star, Minus, Plus, Package, ChevronDown, ZoomIn, ZoomOut, PlayCircle, ClipboardList, Truck, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import useCartStore from '../store/cartStore'
 import useWishlist from '../hooks/useWishlist'
 import toast from 'react-hot-toast'
 import api from '../api'
 import ProductCard from '../components/ui/ProductCard'
+import { cldOptimize } from '../utils/cloudinary'
 
 const TABS = [
   { id: 'reviews', label: 'Reviews' },
@@ -15,7 +16,7 @@ const TABS = [
 const INFO_SECTIONS = [
   { id: 'description', label: 'Description',        icon: Star },
   { id: 'brand',        label: 'Brand Information',  icon: ClipboardList },
-  { id: 'highlights',   label: 'Highlights',         icon: Sparkles },
+  { id: 'shipping',     label: 'Shipping Policy',    icon: Truck },
 ]
 
 const AVATAR_COLORS = ['#42307B', '#D77E2E', '#DD9D39', '#611CD0', '#DC8660']
@@ -53,10 +54,18 @@ export default function ProductPage() {
   const REVIEWS_PER_PAGE = 3
 
   const [openInfo, setOpenInfo] = useState('description')
+  const [shippingPolicy, setShippingPolicy] = useState(null)
 
   useEffect(() => {
     api.get('/faqs').then(({ data }) => setFaqs(data.faqs || [])).catch(() => setFaqs([]))
     api.get('/settings').then(({ data }) => setFaqsEnabled(data.settings?.faqsEnabled ?? true)).catch(() => {})
+    api.get('/policies')
+      .then(({ data }) => {
+        const match = (data.policies || []).find(p => p.title.toLowerCase().includes('shipping'))
+        if (!match) return
+        return api.get(`/policies/${match.slug}`).then(({ data }) => setShippingPolicy(data.policy))
+      })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -127,6 +136,8 @@ export default function ProductPage() {
     ? Math.round(((activeComparePrice - activePrice) / activeComparePrice) * 100) : 0
   const unitsPerPurchase = pkg ? pkg.quantity : 1
   const outOfStock = (product.stock || 0) < unitsPerPurchase
+  const comingSoon = !!product.isComingSoon
+  const purchaseDisabled = outOfStock || comingSoon
 
   const images = product.images?.length > 0 ? product.images : []
 
@@ -197,7 +208,7 @@ export default function ProductPage() {
               {activeImg === 'video' && product.videoUrl ? (
                 <video src={product.videoUrl} controls autoPlay className="w-full h-full object-cover" onClick={e => e.stopPropagation()} />
               ) : images.length > 0 ? (
-                <img src={images[activeImg]?.url} alt={images[activeImg]?.alt || product.name}
+                <img src={cldOptimize(images[activeImg]?.url, 900)} alt={images[activeImg]?.alt || product.name}
                   onError={e => { e.target.onerror = null; e.target.src = '/logo.png' }}
                   className="w-full h-full object-cover" />
               ) : (
@@ -208,13 +219,16 @@ export default function ProductPage() {
                   <ZoomIn size={11} /> Click to zoom
                 </span>
               )}
+              {comingSoon && (
+                <span className="absolute top-3 left-3 bg-forest-700 text-white text-xs font-bold px-2.5 py-1 rounded-full">COMING SOON</span>
+              )}
             </div>
             {(images.length > 1 || product.videoUrl) && (
               <div className="flex gap-3">
                 {images.map((img, i) => (
                   <button key={i} onClick={() => setActiveImg(i)}
                     className={`w-20 h-20 rounded-2xl overflow-hidden border-2 transition-all ${activeImg === i ? 'border-forest-800' : 'border-forest-100 opacity-60 hover:opacity-100'}`}>
-                    <img src={img.url} alt={img.alt} onError={e => { e.target.onerror = null; e.target.src = '/logo.png' }} className="w-full h-full object-cover" />
+                    <img src={cldOptimize(img.url, 160)} alt={img.alt} loading="lazy" onError={e => { e.target.onerror = null; e.target.src = '/logo.png' }} className="w-full h-full object-cover" />
                   </button>
                 ))}
                 {product.videoUrl && (
@@ -308,15 +322,15 @@ export default function ProductPage() {
                   <Plus size={16} />
                 </button>
               </div>
-              <button onClick={handleAddToCart} disabled={outOfStock}
+              <button onClick={handleAddToCart} disabled={purchaseDisabled}
                 className="btn-gold flex-1 justify-center py-4 text-base disabled:opacity-50 disabled:cursor-not-allowed">
-                <ShoppingCart size={20} /> {!outOfStock ? 'Add to Cart' : 'Out of Stock'}
+                <ShoppingCart size={20} /> {comingSoon ? 'Coming Soon' : outOfStock ? 'Out of Stock' : 'Add to Cart'}
               </button>
             </div>
 
             {/* Buy now + Wishlist */}
             <div className="flex gap-3 mb-6">
-              {!outOfStock ? (
+              {!purchaseDisabled ? (
                 <Link to="/checkout" onClick={handleAddToCart}
                   className="btn-green flex-1 justify-center py-4 text-base">
                   Buy Now — ₹{activePrice * qty}
@@ -355,53 +369,44 @@ export default function ProductPage() {
                     {isOpen && (
                       <div className="px-5 pb-5">
                         {section.id === 'description' && (
-                          <>
-                            <div className="policy-content text-sm" dangerouslySetInnerHTML={{ __html: product.description || 'No description available yet.' }} />
-                            {product.contents?.length > 0 && (
-                              <div className="flex flex-wrap gap-2 mt-4">
-                                {product.contents.map(item => (
-                                  <span key={item} className="bg-green-50 border border-green-200 text-green-700 px-3 py-1.5 rounded-full text-xs font-medium">
-                                    📦 {item}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </>
+                          <div className="policy-content text-sm" dangerouslySetInnerHTML={{ __html: product.description || 'No description available yet.' }} />
                         )}
 
                         {section.id === 'brand' && (
                           <>
                             <div className="grid grid-cols-2 gap-3 text-sm">
+                              {product.seriesName && <div><p className="text-forest-400 text-xs">Series Name</p><p className="text-forest-800 font-medium">{product.seriesName}</p></div>}
+                              {product.titleName && <div><p className="text-forest-400 text-xs">Title Name</p><p className="text-forest-800 font-medium">{product.titleName}</p></div>}
+                              {product.noOfTitles && <div><p className="text-forest-400 text-xs">No. of Titles</p><p className="text-forest-800 font-medium">{product.noOfTitles}</p></div>}
                               {product.author && <div><p className="text-forest-400 text-xs">Author</p><p className="text-forest-800 font-medium">{product.author}</p></div>}
                               {product.illustrator && <div><p className="text-forest-400 text-xs">Illustrator</p><p className="text-forest-800 font-medium">{product.illustrator}</p></div>}
+                              {product.size && <div><p className="text-forest-400 text-xs">Size</p><p className="text-forest-800 font-medium">{product.size}</p></div>}
                               {product.pages && <div><p className="text-forest-400 text-xs">Pages</p><p className="text-forest-800 font-medium">{product.pages}</p></div>}
-                              {product.isbn && <div><p className="text-forest-400 text-xs">ISBN</p><p className="text-forest-800 font-medium">{product.isbn}</p></div>}
+                              {product.isbn && <div><p className="text-forest-400 text-xs">Book Code</p><p className="text-forest-800 font-medium">{product.isbn}</p></div>}
+                              {product.binding && <div><p className="text-forest-400 text-xs">Binding</p><p className="text-forest-800 font-medium">{product.binding}</p></div>}
                               {product.language && <div><p className="text-forest-400 text-xs">Language</p><p className="text-forest-800 font-medium">{product.language}</p></div>}
+                              {product.extras && <div><p className="text-forest-400 text-xs">Extras</p><p className="text-forest-800 font-medium">{product.extras}</p></div>}
                             </div>
                             {product.specifications && (
                               <p className="text-xs text-forest-500 mt-4">{product.specifications}</p>
                             )}
-                            {!product.author && !product.illustrator && !product.pages && !product.isbn && !product.language && !product.specifications && (
+                            {product.contents?.length > 0 && (
+                              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-2.5 rounded-2xl text-xs font-medium mt-4">
+                                <span className="font-bold">Skill Motor: </span>
+                                {product.contents.join(', ')}
+                              </div>
+                            )}
+                            {!product.contents?.length && !product.seriesName && !product.titleName && !product.noOfTitles && !product.author && !product.illustrator && !product.size && !product.pages && !product.isbn && !product.binding && !product.language && !product.extras && !product.specifications && (
                               <p className="text-forest-400 text-sm">No brand information available yet.</p>
                             )}
                           </>
                         )}
 
-                        {section.id === 'highlights' && (
-                          product.benefits?.length > 0 ? (
-                            <div className="space-y-4">
-                              {product.benefits.map((b, i) => (
-                                <div key={i} className="flex gap-3">
-                                  <div className="text-2xl flex-shrink-0">{b.icon}</div>
-                                  <div>
-                                    <h4 className="font-semibold text-forest-900 text-sm mb-0.5">{b.title}</h4>
-                                    <p className="text-forest-500 text-sm leading-relaxed">{b.description}</p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
+                        {section.id === 'shipping' && (
+                          shippingPolicy?.content ? (
+                            <div className="policy-content text-sm" dangerouslySetInnerHTML={{ __html: shippingPolicy.content }} />
                           ) : (
-                            <p className="text-forest-400 text-sm">No highlights listed for this product yet.</p>
+                            <p className="text-forest-400 text-sm">No shipping policy available yet.</p>
                           )
                         )}
                       </div>
@@ -613,7 +618,7 @@ export default function ProductPage() {
               </button>
             )}
             <img
-              src={images[lightboxIndex]?.url}
+              src={cldOptimize(images[lightboxIndex]?.url, 1600)}
               alt={images[lightboxIndex]?.alt || product.name}
               onError={e => { e.target.onerror = null; e.target.src = '/logo.png' }}
               className="max-h-[75vh] max-w-full object-contain transition-transform duration-200 cursor-zoom-in select-none"
@@ -634,7 +639,7 @@ export default function ProductPage() {
               {images.map((img, i) => (
                 <button key={i} onClick={() => lightboxGoTo(i)}
                   className={`w-12 h-12 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 ${lightboxIndex === i ? 'border-white' : 'border-white/20 opacity-50 hover:opacity-80'}`}>
-                  <img src={img.url} alt={img.alt} onError={e => { e.target.onerror = null; e.target.src = '/logo.png' }} className="w-full h-full object-cover" />
+                  <img src={cldOptimize(img.url, 96)} alt={img.alt} loading="lazy" onError={e => { e.target.onerror = null; e.target.src = '/logo.png' }} className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>

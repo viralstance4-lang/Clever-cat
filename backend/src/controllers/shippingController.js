@@ -11,6 +11,8 @@ const DEFAULTS = {
   codChargeAbove:       20,
   giftWrapEnabled:      true,
   giftWrapPrice:        49,
+  magazineCategorySlug:   'kids-magazine',
+  magazineShippingCharge: 400,
 };
 
 // ─── GET /api/settings/shipping — public ──────────────────────────────────────
@@ -31,10 +33,12 @@ exports.updateShipping = async (req, res) => {
     codChargeAbove,
     giftWrapEnabled,
     giftWrapPrice,
+    magazineCategorySlug,
+    magazineShippingCharge,
   } = req.body;
 
   // Validate numeric fields: no negative charges
-  const numericFields = { prepaidFreeThreshold, prepaidCharge, codThreshold, codChargeBelow, codChargeAbove, giftWrapPrice };
+  const numericFields = { prepaidFreeThreshold, prepaidCharge, codThreshold, codChargeBelow, codChargeAbove, giftWrapPrice, magazineShippingCharge };
   for (const [key, val] of Object.entries(numericFields)) {
     if (val !== undefined && (isNaN(val) || Number(val) < 0)) {
       return res.status(400).json({ success: false, message: `${key} must be a non-negative number` });
@@ -44,6 +48,7 @@ exports.updateShipping = async (req, res) => {
   const fields = { ...numericFields };
   if (codEnabled !== undefined) fields.codEnabled = Boolean(codEnabled);
   if (giftWrapEnabled !== undefined) fields.giftWrapEnabled = Boolean(giftWrapEnabled);
+  if (magazineCategorySlug !== undefined) fields.magazineCategorySlug = String(magazineCategorySlug).trim() || 'kids-magazine';
 
   const settings = await ShippingSettings.findOneAndUpdate(
     {},
@@ -66,6 +71,8 @@ exports.getSiteSettings = async (req, res) => {
       logoAlt:     site?.logoAlt    || 'Clever Cat',
       faqsEnabled: site?.faqsEnabled ?? true,
       shopVideoHeading: site?.shopVideoHeading || "Parent's Choice",
+      bannerAutoplay: site?.bannerAutoplay ?? true,
+      bannerAutoplaySpeed: site?.bannerAutoplaySpeed ?? 5000,
     },
   });
 };
@@ -90,6 +97,26 @@ exports.updateShopVideoHeading = async (req, res) => {
   const site = await SiteSettings.findOneAndUpdate(
     {},
     { $set: { shopVideoHeading: shopVideoHeading.trim() } },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+  res.json({ success: true, settings: site });
+};
+
+// ─── PUT /api/settings/banner-autoplay — admin only ───────────────────────────
+exports.updateBannerAutoplay = async (req, res) => {
+  const { bannerAutoplay, bannerAutoplaySpeed } = req.body;
+  const fields = {};
+  if (bannerAutoplay !== undefined) fields.bannerAutoplay = Boolean(bannerAutoplay);
+  if (bannerAutoplaySpeed !== undefined) {
+    if (isNaN(bannerAutoplaySpeed) || Number(bannerAutoplaySpeed) < 1000) {
+      return res.status(400).json({ success: false, message: 'Speed must be at least 1000ms' });
+    }
+    fields.bannerAutoplaySpeed = Number(bannerAutoplaySpeed);
+  }
+
+  const site = await SiteSettings.findOneAndUpdate(
+    {},
+    { $set: fields },
     { new: true, upsert: true, setDefaultsOnInsert: true }
   );
   res.json({ success: true, settings: site });
@@ -130,15 +157,41 @@ exports.updateSiteLogo = async (req, res) => {
 };
 
 // ─── Helper: calculate shipping charge (used by order controller) ─────────────
-exports.calculateShipping = async (subtotal, paymentMethod) => {
+// `items` — array of { categories: string[], lineTotal: number } for every cart
+// line. Magazines (identified by `magazineCategorySlug`) ship separately: they
+// always carry the flat `magazineShippingCharge` surcharge and never count
+// toward — or benefit from — the free-shipping-above-threshold offer, which
+// applies only to the non-magazine (book) subtotal.
+exports.calculateShipping = async (items, paymentMethod) => {
   let s = await ShippingSettings.findOne().lean();
   if (!s) s = DEFAULTS;
 
-  // Partial COD still requires a cash collection on delivery, so it uses
-  // the same shipping tiers as plain COD.
-  if (paymentMethod === 'cod' || paymentMethod === 'partial_cod') {
-    return subtotal >= s.codThreshold ? s.codChargeAbove : s.codChargeBelow;
+  const magazineSlug = s.magazineCategorySlug || DEFAULTS.magazineCategorySlug;
+  const magazineCharge = s.magazineShippingCharge ?? DEFAULTS.magazineShippingCharge;
+
+  let bookSubtotal = 0;
+  let hasBooks = false;
+  let hasMagazine = false;
+  for (const item of items) {
+    if ((item.categories || []).includes(magazineSlug)) {
+      hasMagazine = true;
+    } else {
+      hasBooks = true;
+      bookSubtotal += item.lineTotal;
+    }
   }
-  // Prepaid / Razorpay / any online method
-  return subtotal >= s.prepaidFreeThreshold ? 0 : s.prepaidCharge;
+
+  let base = 0;
+  if (hasBooks) {
+    // Partial COD still requires a cash collection on delivery, so it uses
+    // the same shipping tiers as plain COD.
+    if (paymentMethod === 'cod' || paymentMethod === 'partial_cod') {
+      base = bookSubtotal >= s.codThreshold ? s.codChargeAbove : s.codChargeBelow;
+    } else {
+      // Prepaid / Razorpay / any online method
+      base = bookSubtotal >= s.prepaidFreeThreshold ? 0 : s.prepaidCharge;
+    }
+  }
+
+  return base + (hasMagazine ? magazineCharge : 0);
 };

@@ -1,55 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Plus, Edit2, Trash2, FileText, X, Search, Loader2, Eye, EyeOff, Bold, Italic, Underline, List, ListOrdered } from 'lucide-react'
+import { Plus, Edit2, Trash2, FileText, X, Search, Loader2, Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../../api'
+import RichEditor from '../../components/ui/RichEditor'
 
 const emptyPolicy = { title: '', content: '', isActive: true, order: '0' }
-
-function RichEditor({ value, onChange }) {
-  return (
-    <div>
-      <div className="flex flex-wrap gap-1 p-2 bg-forest-50 border border-forest-200 rounded-t-xl">
-        {[
-          { cmd: 'bold', label: <Bold size={14} /> },
-          { cmd: 'italic', label: <Italic size={14} /> },
-          { cmd: 'underline', label: <Underline size={14} /> },
-        ].map(({ cmd, label }) => (
-          <button key={cmd} type="button"
-            onMouseDown={e => { e.preventDefault(); document.execCommand(cmd) }}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-forest-600 hover:bg-forest-100 hover:text-forest-900 transition-colors">
-            {label}
-          </button>
-        ))}
-        <div className="w-px h-6 bg-forest-200 mx-1 self-center" />
-        {[
-          { cmd: 'insertUnorderedList', label: <List size={14} /> },
-          { cmd: 'insertOrderedList', label: <ListOrdered size={14} /> },
-        ].map(({ cmd, label }) => (
-          <button key={cmd} type="button"
-            onMouseDown={e => { e.preventDefault(); document.execCommand(cmd) }}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-forest-600 hover:bg-forest-100 hover:text-forest-900 transition-colors">
-            {label}
-          </button>
-        ))}
-        <div className="w-px h-6 bg-forest-200 mx-1 self-center" />
-        {['h2', 'h3', 'p'].map(tag => (
-          <button key={tag} type="button"
-            onMouseDown={e => { e.preventDefault(); document.execCommand('formatBlock', false, tag) }}
-            className="px-2.5 h-8 rounded-lg text-xs font-semibold uppercase text-forest-600 hover:bg-forest-100 hover:text-forest-900 transition-colors">
-            {tag}
-          </button>
-        ))}
-      </div>
-      <div
-        contentEditable
-        suppressContentEditableWarning
-        dangerouslySetInnerHTML={{ __html: value }}
-        onInput={e => onChange(e.currentTarget.innerHTML)}
-        className="policy-content min-h-[260px] p-4 bg-white border border-forest-200 border-t-0 rounded-b-xl outline-none focus:ring-2 focus:ring-forest-800 cursor-text"
-      />
-    </div>
-  )
-}
 
 function PolicyModal({ policy, onClose, onSaved }) {
   const isEdit = !!policy

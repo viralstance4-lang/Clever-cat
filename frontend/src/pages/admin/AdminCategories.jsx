@@ -6,7 +6,7 @@ import MediaInput from '../../components/admin/MediaInput'
 
 const emptyCategory = {
   name: '', description: '', parentSlug: '', emoji: '✨', color: '#D77E2E',
-  imageUrl: '', status: 'published', order: '0',
+  imageUrl: '', link: '', status: 'published', order: '0',
 }
 
 function CategoryModal({ category, allCategories, onClose, onSaved }) {
@@ -35,6 +35,7 @@ function CategoryModal({ category, allCategories, onClose, onSaved }) {
         emoji: form.emoji || '✨',
         color: form.color || '#D77E2E',
         imageUrl: form.imageUrl,
+        link: form.link?.trim() || '',
         status: form.status,
         order: Number(form.order) || 0,
       }
@@ -108,6 +109,12 @@ function CategoryModal({ category, allCategories, onClose, onSaved }) {
               previewClassName="w-40 aspect-[3/4.3] rounded-2xl mx-auto"
               onRemove={() => setForm(f => ({ ...f, imageUrl: '' }))}
             />
+          </div>
+
+          <div>
+            <label className="block text-xs text-forest-500 mb-1.5">Custom Link <span className="text-forest-400">(optional — leave blank to use the default shop page)</span></label>
+            <input name="link" value={form.link} onChange={handleChange} className="input" placeholder="/iq-junior or https://..." />
+            <p className="text-xs text-forest-400 mt-1">When set, clicking this category (homepage cards, header menu) goes here instead of the shop page filtered to this category.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

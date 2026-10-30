@@ -17,6 +17,14 @@ const shippingSettingsSchema = new mongoose.Schema(
     // ── Gift wrap ─────────────────────────────────────────────────────────────
     giftWrapEnabled: { type: Boolean, default: true },
     giftWrapPrice:   { type: Number,  default: 49   }, // flat fee added when customer opts in at checkout
+
+    // ── Magazines (e.g. IQ Junior) ────────────────────────────────────────────
+    // Magazines ship separately from books and always carry this flat surcharge
+    // (both prepaid and COD), on top of whatever the book portion of the cart
+    // charges. The free-shipping-above-threshold offer never applies to them —
+    // only to the non-magazine (book) subtotal.
+    magazineCategorySlug:   { type: String, default: 'kids-magazine' },
+    magazineShippingCharge: { type: Number, default: 400 },
   },
   { timestamps: true }
 );
@@ -38,6 +46,10 @@ const siteSettingsSchema = new mongoose.Schema(
 
     // Heading shown above the "Shop by Video" carousel on the homepage
     shopVideoHeading: { type: String, default: "Parent's Choice" },
+
+    // Homepage hero banner slider — autoplay ON/OFF and interval (ms)
+    bannerAutoplay:      { type: Boolean, default: true },
+    bannerAutoplaySpeed: { type: Number,  default: 5000 },
   },
   { timestamps: true }
 );

@@ -29,7 +29,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center px-4 py-16 overflow-hidden" style={{ background: 'linear-gradient(135deg,#FCFCFD,#D5C8EA)' }}>
+    <div className="relative min-h-screen flex items-center justify-center px-4 py-16 overflow-hidden" style={{ background: 'linear-gradient(135deg,#FCF8F0,#D5C8EA)' }}>
       <Doodles items={[
         { icon: 'star', className: 'top-[12%] left-[10%]', size: 18, delay: '0s' },
         { icon: 'heart', className: 'top-[18%] right-[12%]', size: 16, delay: '0.6s' },

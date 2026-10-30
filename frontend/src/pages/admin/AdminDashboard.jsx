@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { IndianRupee, ShoppingBag, Users, Activity, Star, RefreshCw, Package, Send, Truck, CheckCircle, XCircle } from 'lucide-react'
+import { IndianRupee, ShoppingBag, Users, Activity, Star, RefreshCw, Package, Send, Truck, CheckCircle, XCircle, AlertTriangle } from 'lucide-react'
 import api from '../../api'
 import { fmtINR, fmtDate, ORDER_STATUS_COLORS } from '../../utils/format'
 
@@ -39,7 +39,7 @@ export default function AdminDashboard() {
     return <div className="text-forest-600 text-sm">Loading dashboard…</div>
   }
 
-  const { stats, recentOrders, monthlyRevenue, topProducts, categorySales, shippingStats } = data
+  const { stats, recentOrders, monthlyRevenue, topProducts, categorySales, shippingStats, lowStockProducts = [] } = data
   const maxMonthly = Math.max(1, ...monthlyRevenue.map(m => m.revenue))
   const maxSold = Math.max(1, ...topProducts.map(p => p.sold))
   const totalCategorySold = categorySales.reduce((a, c) => a + c.sold, 0) || 1
@@ -54,7 +54,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <StatCard icon={IndianRupee} label="Total Revenue" value={fmtINR(stats.totalRevenue)}
           sub={`${fmtINR(stats.todayRevenue)} today`} accent="bg-green-100 text-green-700" />
         <StatCard icon={ShoppingBag} label="Total Orders" value={stats.totalOrders}
@@ -65,6 +65,8 @@ export default function AdminDashboard() {
           accent="bg-forest-100 text-forest-900" />
         <StatCard icon={Star} label="Pending Reviews" value={stats.pendingReviews}
           accent="bg-red-100 text-red-700" />
+        <StatCard icon={AlertTriangle} label="Low Stock" value={lowStockProducts.length}
+          sub={lowStockProducts.length > 0 ? 'Below 10 units' : undefined} accent="bg-amber-100 text-amber-700" />
       </div>
 
       {/* Shipping overview */}
@@ -99,7 +101,7 @@ export default function AdminDashboard() {
                     <span>{fmtINR(m.revenue)} · {m.orders} orders</span>
                   </div>
                   <div className="h-2 bg-forest-100 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${(m.revenue / maxMonthly) * 100}%`, background: 'linear-gradient(135deg,#4F29A3,#1D1538)' }} />
+                    <div className="h-full rounded-full" style={{ width: `${(m.revenue / maxMonthly) * 100}%`, background: 'linear-gradient(135deg,#4F29A3,#3D1868)' }} />
                   </div>
                 </div>
               ))}
@@ -185,6 +187,31 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Low stock products */}
+      <div className="card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-forest-900 flex items-center gap-2">
+            <AlertTriangle size={16} className="text-amber-600" /> Low Stock Products
+          </h2>
+          <Link to="/admin/products" className="text-xs text-forest-800 hover:underline">View all products</Link>
+        </div>
+        {lowStockProducts.length === 0 ? (
+          <p className="text-sm text-forest-400">All products are well stocked.</p>
+        ) : (
+          <div className="space-y-3">
+            {lowStockProducts.map(p => (
+              <div key={p._id} className="flex items-center gap-3">
+                <img src={p.images?.[0]?.url} alt={p.name} className="w-10 h-10 rounded-lg object-cover bg-forest-100 flex-shrink-0" />
+                <p className="flex-1 min-w-0 text-sm font-medium text-forest-900 truncate">{p.name}</p>
+                <span className={`text-xs px-2.5 py-1 rounded-full font-semibold flex-shrink-0 ${p.stock === 0 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                  {p.stock === 0 ? 'Out of stock' : `${p.stock} left`}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

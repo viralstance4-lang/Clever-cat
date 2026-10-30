@@ -49,7 +49,7 @@ const sendOrderConfirmationEmail = async (order, email) => {
         <!-- Logo -->
         <div style="text-align:center;margin-bottom:32px;">
           ${logoBlock}
-          <h1 style="margin:12px 0 0;font-size:20px;color:#EC1380;letter-spacing:2px;text-transform:uppercase;">${brandName}</h1>
+          <h1 style="margin:12px 0 0;font-size:20px;color:#D77E2E;letter-spacing:2px;text-transform:uppercase;font-family:'PP Pangram Sans Rounded',system-ui,sans-serif;">${brandName}</h1>
         </div>
 
         <!-- Banner -->
@@ -101,7 +101,7 @@ const sendOrderConfirmationEmail = async (order, email) => {
 
         <!-- Footer -->
         <div style="text-align:center;color:rgba(255,255,255,0.3);font-size:12px;">
-          <p>Questions? WhatsApp us at <a href="https://wa.me/919876543210" style="color:#EC1380;">+91 98765 43210</a></p>
+          <p>Questions? WhatsApp us at <a href="https://wa.me/919218171625" style="color:#EC1380;">+91 92181 71625</a></p>
           <p style="margin-top:8px;">© ${new Date().getFullYear()} Clever Cat. All rights reserved.</p>
         </div>
       </div>

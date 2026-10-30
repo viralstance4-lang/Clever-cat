@@ -7,8 +7,16 @@ import ShopByVideoSlider from '../components/ui/ShopByVideoSlider'
 import GraphicDoodles from '../components/ui/GraphicDoodles'
 import api from '../api'
 import { getConcernTheme } from '../constants/concernThemes'
+import { cldOptimize } from '../utils/cloudinary'
 
 const isExternalUrl = (url) => /^https?:\/\//i.test(url || '')
+
+// Fallback order/visibility used before the admin-configured layout has
+// loaded (or if that request fails) — matches the backend's seeded defaults.
+const DEFAULT_SECTION_ORDER = [
+  'hero', 'trustBadges', 'shopByCategory', 'shopByAge', 'shopByPrice',
+  'bestSellers', 'shopByVideo', 'newArrivals', 'whyChooseUs', 'testimonials', 'newsletter',
+].map(key => ({ key, isVisible: true, badge: '', heading: '' }))
 
 // Default cards — shown when no active age-group cards are configured in the admin panel.
 const DEFAULT_AGE_GROUPS = [
@@ -30,23 +38,23 @@ const CATEGORY_COLORS = [
 
 // Default pills — shown when no active price ranges are configured in the admin panel.
 const DEFAULT_PRICE_TIERS = [
-  { label: 'Under ₹199', maxPrice: 199 },
-  { label: '₹200 – ₹499', maxPrice: 499 },
-  { label: 'Above ₹500', maxPrice: 999 },
+  { label: 'Under ₹199', minPrice: 0,   maxPrice: 199 },
+  { label: '₹200 – ₹499', minPrice: 200, maxPrice: 499 },
+  { label: 'Above ₹500', minPrice: 500, maxPrice: 999 },
 ]
 
 const TRUST = [
-  { icon: '/original.png',           title: 'Original Products',  desc: 'Every book and toy sourced directly from publishers' },
-  { icon: '/transaction.png',        title: 'Secure Payments',    desc: 'UPI, cards & net banking, fully encrypted' },
-  { icon: '/fast-delivery.png',      title: 'Fast Shipping',      desc: 'Dispatched within 24 hours, pan-India delivery' },
-  { icon: '/technical-support.png',  title: 'A+ Customer Support', desc: "We're here to help, every step of the way" },
+  { icon: 'https://res.cloudinary.com/eob3oguc/image/upload/v1790763438/clevercat/media/arsp82alnimbscxw2wii.png', title: 'Original Products',  desc: 'Every book and toy sourced directly from publishers' },
+  { icon: 'https://res.cloudinary.com/eob3oguc/image/upload/v1790763437/clevercat/media/qoayxw1uinrndvvzkdll.png', title: 'Secure Payments',    desc: 'UPI, cards & net banking, fully encrypted' },
+  { icon: 'https://res.cloudinary.com/eob3oguc/image/upload/v1790763438/clevercat/media/ylemc4zgeodcykogj8x8.png', title: 'Fast Shipping',      desc: 'Dispatched within 24 hours, pan-India delivery' },
+  { icon: 'https://res.cloudinary.com/eob3oguc/image/upload/v1790763437/clevercat/media/oohpfczvhypdhuxn9hry.png', title: 'A+ Customer Support', desc: "We're here to help, every step of the way" },
 ]
 
 const WHY_US = [
   { title: 'Hand-Picked for Every Age', desc: 'Every product is chosen and age-tagged so parents can shop with confidence.' },
   { title: 'Beautifully Designed', desc: 'Colourful, durable and built to survive real play — not just look good on a shelf.' },
   { title: 'Screen-Free Fun', desc: 'Books, puzzles and activity kits that keep curious minds engaged without a screen.' },
-  { title: 'Gift-Ready, Always', desc: 'Add gift wrap at checkout — perfect for birthdays, festivals or a small surprise.' },
+  { title: 'Gift-Ready, Always', desc: 'Add gift box at checkout — perfect for birthdays, festivals or a small surprise.' },
 ]
 
 const TESTIMONIAL_COLORS = ['#611CD0', '#DC8660', '#16A34A', '#D77E2E', '#E3B771']
@@ -58,6 +66,8 @@ export default function HomePage() {
   const [ageGroups, setAgeGroups] = useState(null)
   const [categories, setCategories] = useState([])
   const [priceRanges, setPriceRanges] = useState(null)
+  const [sectionLayout, setSectionLayout] = useState(DEFAULT_SECTION_ORDER)
+  const [customSectionProducts, setCustomSectionProducts] = useState({})
   const [testimonials, setTestimonials] = useState([])
   const [activeTestimonial, setActiveTestimonial] = useState(0)
   const [testimonialPaused, setTestimonialPaused] = useState(false)
@@ -105,7 +115,7 @@ export default function HomePage() {
   useEffect(() => {
     setLoading(true)
     Promise.all([
-      api.get('/products?sort=popular&limit=8'),
+      api.get('/products?bestseller=true&sort=popular&limit=8'),
       api.get('/products?sort=newest&limit=8'),
     ])
       .then(([bestRes, newRes]) => {
@@ -114,6 +124,28 @@ export default function HomePage() {
       })
       .catch(() => { setBestsellers([]); setNewArrivals([]) })
       .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    api.get('/homepage-sections')
+      .then(({ data }) => {
+        if (!data.sections?.length) return
+        setSectionLayout(data.sections)
+        // Custom sections sourcing "All Products" or "A Specific Category" need
+        // their own fetch — hand-picked ("manual") sections already come back
+        // with productIds populated, so no extra request needed for those.
+        data.sections
+          .filter(s => s.type === 'custom' && (s.productSource === 'all' || s.productSource === 'category'))
+          .forEach(s => {
+            const query = s.productSource === 'category'
+              ? `category=${encodeURIComponent(s.categorySlug)}&limit=${s.productLimit || 8}`
+              : `sort=popular&limit=${s.productLimit || 8}`
+            api.get(`/products?${query}`)
+              .then(({ data }) => setCustomSectionProducts(prev => ({ ...prev, [s.key]: data.products || [] })))
+              .catch(() => setCustomSectionProducts(prev => ({ ...prev, [s.key]: [] })))
+          })
+      })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -131,13 +163,22 @@ export default function HomePage() {
   const ageGroupCards = ageGroups && ageGroups.length > 0 ? ageGroups : DEFAULT_AGE_GROUPS
   const priceTiers = priceRanges && priceRanges.length > 0 ? priceRanges : DEFAULT_PRICE_TIERS
 
-  return (
-    <div className="min-h-screen overflow-x-hidden">
+  // Admin-configured layout: visibility, order, and badge/heading overrides
+  // per section (Admin → Homepage Builder). Sections render in this order;
+  // a section not present in the fetched config (shouldn't happen once
+  // seeded) just falls back to being shown.
+  const sectionCfg = (key) => sectionLayout.find(s => s.key === key) || { isVisible: true, badge: '', heading: '' }
+  const isShown = (key) => sectionCfg(key).isVisible !== false
+  const badgeFor = (key, fallback) => sectionCfg(key).badge || fallback
+  const headingFor = (key, fallback) => sectionCfg(key).heading || fallback
+  const descriptionFor = (key, fallback) => sectionCfg(key).subtitle || fallback
 
-      {/* ── HERO ── */}
+  const sections = {
+    hero: isShown('hero') && (
       <HeroBannerSlider />
+    ),
 
-      {/* ── TRUST BADGES ── */}
+    trustBadges: isShown('trustBadges') && (
       <section className="bg-forest-900 py-12">
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-6">
           {TRUST.map((t, i) => (
@@ -145,8 +186,9 @@ export default function HomePage() {
               <div className="animate-float-icon" style={{ animationDelay: `${i * 0.2}s` }}>
                 <div className="group" style={{ perspective: '600px' }}>
                   <img
-                    src={t.icon}
+                    src={cldOptimize(t.icon, 128)}
                     alt={t.title}
+                    loading="lazy"
                     className="w-16 h-16 object-contain drop-shadow-lg transition-transform duration-300 ease-out group-hover:[transform:rotateY(20deg)_rotateX(10deg)_scale(1.15)]"
                   />
                 </div>
@@ -157,9 +199,9 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+    ),
 
-      {/* ── SHOP BY CATEGORY ── */}
-      {categories.length > 0 && (
+    shopByCategory: isShown('shopByCategory') && categories.length > 0 && (
         <section className="relative py-16">
           {/* Full-bleed background pattern — spans the whole screen, not just the content column */}
           <img src="/bg_dashed-_orange.png.webp" alt="" aria-hidden="true"
@@ -167,9 +209,9 @@ export default function HomePage() {
 
           <div className="relative z-10 px-4 max-w-7xl mx-auto">
           <div className="text-center mb-10">
-            <span className="badge-green mb-3 inline-block">Explore</span>
-            <h2 className="section-title">Shop by Category</h2>
-            <p className="text-forest-600 mt-3 max-w-xl mx-auto">Story books, puzzles, craft kits and more — organised the way parents actually shop</p>
+            <span className="badge-green mb-3 inline-block">{badgeFor('shopByCategory', 'Explore')}</span>
+            <h2 className="section-title">{headingFor('shopByCategory', 'Shop by Category')}</h2>
+            <p className="text-forest-600 mt-3 max-w-xl mx-auto">{descriptionFor('shopByCategory', 'Story books, puzzles, craft kits and more — organised the way parents actually shop')}</p>
           </div>
 
           <div
@@ -183,22 +225,34 @@ export default function HomePage() {
               ref={categoryScrollRef}
               className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
-              {categories.map((c, i) => (
-                <Link key={c._id} to={`/shop?category=${c.slug}`} data-category-card
-                  className="relative flex-shrink-0 snap-start w-[46%] sm:w-[220px] aspect-[3/4.3] rounded-3xl overflow-hidden border-2 hover:scale-[1.03] transition-all duration-300 shadow-sm hover:shadow-xl"
-                  style={{ background: CATEGORY_COLORS[i % CATEGORY_COLORS.length].bg, borderColor: CATEGORY_COLORS[i % CATEGORY_COLORS.length].border }}>
-                  {c.imageUrl ? (
-                    <img src={c.imageUrl} alt={c.name} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
-                  ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-4">
-                      <span className="bg-white text-forest-900 text-sm font-display font-bold px-4 py-1.5 rounded-full shadow-sm text-center leading-tight">
-                        {c.name}
-                      </span>
-                      <div className="text-6xl">{c.emoji}</div>
-                    </div>
-                  )}
-                </Link>
-              ))}
+              {categories.map((c, i) => {
+                const target = c.link || `/shop?category=${c.slug}`
+                const cardClass = "relative flex-shrink-0 snap-start w-[46%] sm:w-[220px] aspect-[3/4.3] rounded-3xl overflow-hidden border-2 hover:scale-[1.03] transition-all duration-300 shadow-sm hover:shadow-xl"
+                const cardStyle = { background: CATEGORY_COLORS[i % CATEGORY_COLORS.length].bg, borderColor: CATEGORY_COLORS[i % CATEGORY_COLORS.length].border }
+                const content = (
+                  <>
+                    {c.imageUrl ? (
+                      <img src={cldOptimize(c.imageUrl, 440)} alt={c.name} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-4">
+                        <span className="bg-white text-forest-900 text-sm font-display font-bold px-4 py-1.5 rounded-full shadow-sm text-center leading-tight">
+                          {c.name}
+                        </span>
+                        <div className="text-6xl">{c.emoji}</div>
+                      </div>
+                    )}
+                  </>
+                )
+                return isExternalUrl(target) ? (
+                  <a key={c._id} href={target} target="_blank" rel="noopener noreferrer" data-category-card className={cardClass} style={cardStyle}>
+                    {content}
+                  </a>
+                ) : (
+                  <Link key={c._id} to={target} data-category-card className={cardClass} style={cardStyle}>
+                    {content}
+                  </Link>
+                )
+              })}
             </div>
 
             {categories.length > 2 && (
@@ -216,9 +270,9 @@ export default function HomePage() {
           </div>
           </div>
         </section>
-      )}
+      ),
 
-      {/* ── SHOP BY AGE ── */}
+    shopByAge: isShown('shopByAge') && (
       <section className="relative py-16">
         <div className="relative z-10 px-4 max-w-7xl mx-auto">
         <GraphicDoodles items={[
@@ -229,9 +283,9 @@ export default function HomePage() {
           { src: '/d67c5137-e870-4480-9bf8-88a59509fe56.avif', className: 'hidden md:block bottom-0 right-0 lg:-right-6 w-24 lg:w-28', delay: '0.6s' },
         ]} />
         <div className="relative text-center mb-10">
-          <span className="badge-green mb-3 inline-block">Personalised Picks</span>
-          <h2 className="section-title">Shop by Age</h2>
-          <p className="text-forest-600 mt-3 max-w-xl mx-auto">Find the perfect books and learning products for every stage of your child's growth</p>
+          <span className="badge-green mb-3 inline-block">{badgeFor('shopByAge', 'Personalised Picks')}</span>
+          <h2 className="section-title">{headingFor('shopByAge', 'Shop by Age')}</h2>
+          <p className="text-forest-600 mt-3 max-w-xl mx-auto">{descriptionFor('shopByAge', "Find the perfect books and learning products for every stage of your child's growth")}</p>
         </div>
         <div className="relative flex flex-wrap justify-center gap-4">
           {ageGroupCards.map((c, i) => {
@@ -241,7 +295,7 @@ export default function HomePage() {
             const content = (
               <>
                 {c.image ? (
-                  <img src={c.image} alt={c.label} className="w-full aspect-square mx-auto mb-2 object-cover rounded-xl" />
+                  <img src={cldOptimize(c.image, 220)} alt={c.label} loading="lazy" className="w-full aspect-square mx-auto mb-2 object-cover rounded-xl" />
                 ) : (
                   <div className="text-3xl mb-2">{c.icon}</div>
                 )}
@@ -261,28 +315,43 @@ export default function HomePage() {
         </div>
         </div>
       </section>
+      ),
 
-      {/* ── SHOP BY PRICE ── */}
-      <section className="py-4 px-4 max-w-7xl mx-auto">
+    shopByPrice: isShown('shopByPrice') && (
+      <section className="py-16 px-4 max-w-7xl mx-auto">
+        <div className="text-center mb-10">
+          <span className="badge-green mb-3 inline-block">{badgeFor('shopByPrice', 'Budget Friendly')}</span>
+          <h2 className="section-title">{headingFor('shopByPrice', 'Shop by Price')}</h2>
+          <p className="text-forest-600 mt-3 max-w-xl mx-auto">{descriptionFor('shopByPrice', 'Find books and learning products that fit your budget, from pocket-friendly picks to premium collections')}</p>
+        </div>
         <div className="flex flex-wrap justify-center gap-4">
           {priceTiers.map(t => (
-            <Link key={t._id || t.label} to={`/shop?maxPrice=${t.maxPrice}`}
-              className="btn-outline-gold text-sm px-6 py-3">
-              {t.label}
-            </Link>
+            t.imageUrl ? (
+              <Link key={t._id || t.label} to={`/shop?minPrice=${t.minPrice || 0}&maxPrice=${t.maxPrice}`}
+                className="flex flex-col items-center gap-2 w-[calc((100%_-_1rem)/2)] sm:w-44 md:w-52 px-3 py-5 rounded-2xl text-forest-800 hover:text-forest-900 transition-all duration-300">
+                <img src={cldOptimize(t.imageUrl, 280)} alt="" loading="lazy" className="w-full aspect-square sm:w-40 sm:h-40 rounded-xl object-cover" />
+                <span className="text-sm font-semibold text-center">{t.label}</span>
+              </Link>
+            ) : (
+              <Link key={t._id || t.label} to={`/shop?minPrice=${t.minPrice || 0}&maxPrice=${t.maxPrice}`}
+                className="btn-outline-gold text-sm px-6 py-3">
+                {t.label}
+              </Link>
+            )
           ))}
         </div>
       </section>
+      ),
 
-      {/* ── BEST SELLERS ── */}
+    bestSellers: isShown('bestSellers') && (
       <section className="py-16 px-4 bg-gradient-to-b from-forest-50 to-forest-100/30">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-end justify-between mb-10">
             <div>
-              <span className="badge-gold mb-3 inline-block">Our Products</span>
-              <h2 className="section-title">Best Sellers</h2>
+              <span className="badge-gold mb-3 inline-block">{badgeFor('bestSellers', 'Our Products')}</span>
+              <h2 className="section-title">{headingFor('bestSellers', 'Best Sellers')}</h2>
             </div>
-            <Link to="/shop?sort=popular" className="text-forest-800 hover:text-forest-900 font-medium flex items-center gap-1 text-sm">
+            <Link to="/shop?bestseller=true" className="text-forest-800 hover:text-forest-900 font-medium flex items-center gap-1 text-sm">
               View All <ArrowRight size={16} />
             </Link>
           </div>
@@ -297,17 +366,19 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      ),
 
-      {/* ── SHOP BY VIDEO ── */}
+    shopByVideo: isShown('shopByVideo') && (
       <ShopByVideoSlider />
+    ),
 
-      {/* ── NEW ARRIVALS ── */}
+    newArrivals: isShown('newArrivals') && (
       <section className="py-16 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-end justify-between mb-10">
             <div>
-              <span className="badge-green mb-3 inline-block">Just In</span>
-              <h2 className="section-title">New Arrivals</h2>
+              <span className="badge-green mb-3 inline-block">{badgeFor('newArrivals', 'Just In')}</span>
+              <h2 className="section-title">{headingFor('newArrivals', 'New Arrivals')}</h2>
             </div>
             <Link to="/shop?sort=newest" className="text-forest-800 hover:text-forest-900 font-medium flex items-center gap-1 text-sm">
               View All <ArrowRight size={16} />
@@ -324,32 +395,34 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      ),
 
-      {/* ── WHY CLEVER CAT ── */}
+    whyChooseUs: isShown('whyChooseUs') && (
       <section className="relative py-16">
         <div className="relative z-10 px-4 max-w-7xl mx-auto">
         <GraphicDoodles items={[
           { src: '/Group-1-5.png', className: 'hidden sm:block -top-4 -left-4 lg:-left-12 w-16 sm:w-20', delay: '0.3s' },
           { src: '/2 (21).png', className: 'hidden sm:block -bottom-2 left-[8%] sm:left-[15%] w-10', delay: '0.7s' },
-          { src: '/origamipperart-09.png', className: 'hidden xl:block top-1/2 -translate-y-1/2 -right-16 2xl:-right-24 w-32 xl:w-40 opacity-90', delay: '0.1s', animate: 'float-icon' },
+          { src: 'https://res.cloudinary.com/eob3oguc/image/upload/v1791010712/clevercat/media/a9mggjc9usaiaxq0mz4b.png', className: 'hidden xl:block top-1/2 -translate-y-1/2 -right-16 2xl:-right-24 w-32 xl:w-40 opacity-90', delay: '0.1s', animate: 'float-icon' },
         ]} />
 
         <div className="relative z-10 grid md:grid-cols-2 gap-12 items-center">
           <div>
             <img
-              src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800"
+              src={cldOptimize('https://res.cloudinary.com/eob3oguc/image/upload/v1790763793/clevercat/media/yjuvh2yrvlepzn5ncuu2.png', 700)}
               alt="Kids reading books"
-              className="rounded-3xl shadow-xl w-full object-cover h-80"
+              loading="lazy"
+              className="rounded-3xl w-full object-cover h-[28rem]"
             />
           </div>
           <div>
-            <span className="badge-green mb-4 inline-block">Why Choose Us</span>
-            <h2 className="section-title mb-6">Big Ideas for Little Minds</h2>
+            <span className="badge-green mb-4 inline-block">{badgeFor('whyChooseUs', 'Why Choose Us')}</span>
+            <h2 className="section-title mb-6">{headingFor('whyChooseUs', 'Big Ideas for Little Minds')}</h2>
             <div className="space-y-5">
               {WHY_US.map(item => (
                 <div key={item.title} className="flex gap-4">
                   <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5"
-                    style={{ background: 'linear-gradient(135deg,#4F29A3,#1D1538)' }}>
+                    style={{ background: 'linear-gradient(135deg,#4F29A3,#3D1868)' }}>
                     <CheckCircle size={16} className="text-white" />
                   </div>
                   <div>
@@ -366,23 +439,23 @@ export default function HomePage() {
         </div>
         </div>
       </section>
+      ),
 
-      {/* ── TESTIMONIALS ── */}
-      {testimonials.length > 0 && (
+    testimonials: isShown('testimonials') && testimonials.length > 0 && (
       <section className="py-16 px-4 bg-forest-900 relative overflow-hidden">
         <Sparkles size={22} className="absolute top-8 left-[8%] text-gold-accent animate-twinkle" />
         <Star size={16} className="absolute bottom-10 right-[10%] text-gold-accent fill-gold-accent animate-twinkle" style={{ animationDelay: '0.6s' }} />
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="text-center mb-10">
-            <span className="badge-gold mb-3 inline-block">Parent Love</span>
+            <span className="badge-gold mb-3 inline-block">{badgeFor('testimonials', 'Parent Love')}</span>
             <h2 className="text-3xl md:text-4xl font-display font-semibold text-white">
-              Loved by Parents Everywhere
+              {headingFor('testimonials', 'Loved by Parents Everywhere')}
             </h2>
           </div>
 
           {/* Coverflow carousel — center card highlighted, side cards recede with scale/blur/opacity */}
           <div
-            className="relative h-[360px] sm:h-[340px] flex items-center justify-center"
+            className="relative h-[460px] sm:h-[420px] flex items-center justify-center"
             onMouseEnter={() => setTestimonialPaused(true)}
             onMouseLeave={() => setTestimonialPaused(false)}
           >
@@ -415,7 +488,7 @@ export default function HomePage() {
                   }}
                 >
                   {t.image ? (
-                    <img src={t.image} alt={t.name} className="w-16 h-16 rounded-full mx-auto mb-3 object-cover border-2" style={{ borderColor: t.borderColor }} />
+                    <img src={cldOptimize(t.image, 128)} alt={t.name} loading="lazy" className="w-16 h-16 rounded-full mx-auto mb-3 object-cover border-2" style={{ borderColor: t.borderColor }} />
                   ) : (
                     <div className="w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center text-white font-bold text-xl"
                       style={{ background: t.borderColor }}>
@@ -425,7 +498,7 @@ export default function HomePage() {
                   <div className="flex justify-center text-gold-accent text-base mb-3">
                     {'★'.repeat(t.rating)}{'☆'.repeat(5 - t.rating)}
                   </div>
-                  <p className="text-forest-700 text-sm text-center leading-relaxed italic line-clamp-4">
+                  <p className="text-forest-700 text-sm text-center leading-relaxed italic">
                     "{t.text}"
                   </p>
                   <p className="text-center font-bold text-forest-900 mt-4">— {t.name}{t.city ? `, ${t.city}` : ''}</p>
@@ -458,12 +531,12 @@ export default function HomePage() {
           )}
         </div>
       </section>
-      )}
+      ),
 
-      {/* ── NEWSLETTER ── */}
+    newsletter: isShown('newsletter') && (
       <section className="py-10 px-4">
         <div className="relative max-w-5xl mx-auto rounded-2xl border border-forest-100 shadow-card px-6 py-5 flex flex-col md:flex-row items-center gap-5"
-          style={{ background: 'linear-gradient(135deg, #FCFCFD, #F5F1FB)' }}>
+          style={{ background: 'linear-gradient(135deg, #FCF8F0, #F5F1FB)' }}>
           <div className="w-12 h-12 rounded-xl bg-forest-100 text-forest-700 flex items-center justify-center flex-shrink-0">
             <Mail size={22} />
           </div>
@@ -480,7 +553,64 @@ export default function HomePage() {
           </form>
         </div>
       </section>
+    ),
+  }
 
+  // Free-form blocks added from Admin → Homepage Builder → Add Custom Section.
+  // Unlike the fixed sections above, all of their content (heading, subtitle,
+  // image, button) is admin-owned data rather than hardcoded.
+  const renderCustomSection = (cfg) => {
+    const customProducts = cfg.productSource === 'manual'
+      ? (cfg.productIds || []).filter(p => p.isActive !== false)
+      : customSectionProducts[cfg.key] || null
+
+    return (
+      <section className="py-16 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="max-w-2xl mx-auto text-center">
+            {cfg.badge && <span className="badge-gold mb-3 inline-block">{cfg.badge}</span>}
+            <h2 className="section-title mb-4">{cfg.heading}</h2>
+            {cfg.subtitle && <p className="text-forest-600 leading-relaxed mb-6">{cfg.subtitle}</p>}
+            {cfg.imageUrl && (
+              <img src={cldOptimize(cfg.imageUrl, 900)} alt="" loading="lazy" className="w-full max-h-96 object-cover rounded-2xl mb-6" />
+            )}
+            {cfg.buttonText && cfg.buttonUrl && (
+              isExternalUrl(cfg.buttonUrl) ? (
+                <a href={cfg.buttonUrl} target="_blank" rel="noopener noreferrer" className="btn-gold inline-flex mb-2">
+                  {cfg.buttonText} <ArrowRight size={18} />
+                </a>
+              ) : (
+                <Link to={cfg.buttonUrl} className="btn-gold inline-flex mb-2">
+                  {cfg.buttonText} <ArrowRight size={18} />
+                </Link>
+              )
+            )}
+          </div>
+
+          {cfg.productSource !== 'none' && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mt-8">
+              {customProducts === null ? (
+                <div className="col-span-full text-center py-10 text-forest-500">Loading products…</div>
+              ) : customProducts.length > 0 ? (
+                customProducts.map(p => <ProductCard key={p._id} product={p} />)
+              ) : (
+                <div className="col-span-full text-center py-10 text-forest-500">No products available yet.</div>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+    )
+  }
+
+  return (
+    <div className="min-h-screen overflow-x-hidden">
+      {sectionLayout.map(cfg => {
+        if (!cfg.isVisible) return null
+        if (sections[cfg.key]) return <div key={cfg.key}>{sections[cfg.key]}</div>
+        if (cfg.type === 'custom') return <div key={cfg.key}>{renderCustomSection(cfg)}</div>
+        return null
+      })}
     </div>
   )
 }

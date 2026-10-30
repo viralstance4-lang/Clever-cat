@@ -10,10 +10,10 @@ exports.getAllProducts = async (req, res) => {
   if (featured === 'true') query.isFeatured = true;
   if (bestseller === 'true') query.isBestseller = true;
   if (search) {
-    // Case-insensitive partial match on name/description.
+    // Case-insensitive partial match across name/tagline/description/author/tags.
     // (MongoDB $text only matches whole stemmed words, so "soul" wouldn't match "Soulmate".)
     const re = new RegExp(search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-    query.$or = [{ name: re }, { description: re }];
+    query.$or = [{ name: re }, { tagline: re }, { description: re }, { author: re }, { tags: re }];
   }
 
   const sortMap = {
@@ -117,12 +117,16 @@ exports.updateProduct = async (req, res) => {
 };
 
 exports.deleteProduct = async (req, res) => {
+  const existing = await Product.findById(req.params.id);
+  if (!existing) return res.status(404).json({ success: false, message: 'Product not found' });
+
+  // Free up the slug so it can be reused by a future product with the same name
+  const freedSlug = `${existing.slug}-deleted-${existing._id}`;
   const product = await Product.findByIdAndUpdate(
     req.params.id,
-    { isActive: false },
+    { isActive: false, slug: freedSlug },
     { new: true }
   );
-  if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
   res.json({ success: true, message: 'Product deactivated' });
 };
 

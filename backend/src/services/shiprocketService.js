@@ -188,6 +188,15 @@ async function buildOrderPayload(order, opts = {}) {
   const products = await Product.find({ _id: { $in: productIds } }).select('weight');
   const weightById = new Map(products.map(p => [String(p._id), p.weight || 0]));
 
+  // Shiprocket's own dashboard/order value is driven by what's in
+  // order_items[].selling_price (and sub_total), not by the separate
+  // `discount` field — so a coupon discount has to be baked into the item
+  // prices here, otherwise Shiprocket shows the pre-discount amount.
+  const isPartialCod = order.paymentMethod === 'partial_cod';
+  const discountFactor = (!isPartialCod && order.subtotal > 0)
+    ? Math.max(order.subtotal - (order.discount || 0), 0) / order.subtotal
+    : 1;
+
   // Build line items. Shiprocket rejects duplicate SKUs, so we append the
   // package label (if any) to make each variant's SKU unique within the order.
   const orderItems = order.items.map(item => {
@@ -199,7 +208,7 @@ async function buildOrderPayload(order, opts = {}) {
       name: item.packageLabel ? `${item.name} (${item.packageLabel})` : item.name,
       sku,
       units: item.quantity,
-      selling_price: item.price,
+      selling_price: Math.round(item.price * discountFactor * 100) / 100,
     };
   });
 
@@ -232,10 +241,13 @@ async function buildOrderPayload(order, opts = {}) {
   // remaining balance as sub_total so Shiprocket tells the courier to collect
   // the correct amount. shipping and discount are zeroed out (already absorbed
   // into the total split). cod_amount is set explicitly as well.
-  const isPartialCod = order.paymentMethod === 'partial_cod';
-  const shiprocketSubTotal    = isPartialCod ? (order.remainingCodAmount || 0) : order.subtotal;
+  // Otherwise, sub_total is the discount-adjusted subtotal (matching the
+  // order_items above) so it lines up with order.total; `discount` is sent
+  // as 0 since it's already netted into sub_total/item prices and shouldn't
+  // be subtracted a second time.
+  const shiprocketSubTotal    = isPartialCod ? (order.remainingCodAmount || 0) : Math.round(order.subtotal * discountFactor * 100) / 100;
   const shiprocketShipping    = isPartialCod ? 0 : (order.shippingCharge || 0);
-  const shiprocketDiscount    = isPartialCod ? 0 : (order.discount || 0);
+  const shiprocketDiscount    = 0;
 
   return {
     order_id: opts.shiprocketOrderId || order.orderId,

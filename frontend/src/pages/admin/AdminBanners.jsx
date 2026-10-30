@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Plus, Edit2, Trash2, Image as ImageIcon, X, Search, Loader2, ToggleLeft, ToggleRight, Copy, GripVertical, Monitor, Smartphone } from 'lucide-react'
+import { Plus, Edit2, Trash2, Image as ImageIcon, X, Search, Loader2, ToggleLeft, ToggleRight, Copy, GripVertical, Monitor, Smartphone, Save } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../../api'
 import MediaInput from '../../components/admin/MediaInput'
@@ -137,6 +137,10 @@ export default function AdminBanners() {
   const dragItem = useRef(null)
   const dragOverItem = useRef(null)
 
+  const [autoplay, setAutoplay] = useState(true)
+  const [autoplaySpeed, setAutoplaySpeed] = useState('5000')
+  const [savingAutoplay, setSavingAutoplay] = useState(false)
+
   const load = () => {
     setLoading(true)
     api.get('/banners')
@@ -145,6 +149,34 @@ export default function AdminBanners() {
       .finally(() => setLoading(false))
   }
   useEffect(load, [])
+
+  useEffect(() => {
+    api.get('/settings')
+      .then(({ data }) => {
+        if (data.settings?.bannerAutoplay !== undefined) setAutoplay(data.settings.bannerAutoplay)
+        if (data.settings?.bannerAutoplaySpeed !== undefined) setAutoplaySpeed(String(data.settings.bannerAutoplaySpeed))
+      })
+      .catch(() => {})
+  }, [])
+
+  const handleSaveAutoplay = async (e) => {
+    e.preventDefault()
+    if (Number(autoplaySpeed) < 1000) return toast.error('Speed must be at least 1000ms')
+    setSavingAutoplay(true)
+    try {
+      const { data } = await api.put('/settings/banner-autoplay', {
+        bannerAutoplay: autoplay,
+        bannerAutoplaySpeed: Number(autoplaySpeed),
+      })
+      setAutoplay(data.settings.bannerAutoplay)
+      setAutoplaySpeed(String(data.settings.bannerAutoplaySpeed))
+      toast.success('Autoplay settings updated')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update autoplay settings')
+    } finally {
+      setSavingAutoplay(false)
+    }
+  }
 
   const filtered = banners.filter(b => b.title.toLowerCase().includes(search.toLowerCase()))
   const reorderable = !search
@@ -224,6 +256,21 @@ export default function AdminBanners() {
       <div className="card p-4 text-sm text-forest-600 bg-forest-50/50 border border-forest-100">
         Banners marked <span className="font-semibold">Active</span> appear on the homepage hero slider, sorted by Display Order, until you hide or delete them. If no active banners exist, the homepage falls back to the default static hero section.
       </div>
+
+      <form onSubmit={handleSaveAutoplay} className="card p-4 flex flex-col sm:flex-row sm:items-end gap-3">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={autoplay} onChange={e => setAutoplay(e.target.checked)} className="w-4 h-4 accent-forest-800" />
+          <span className="text-sm text-forest-800 font-medium whitespace-nowrap">Autoplay slides</span>
+        </label>
+        <div className="flex-1 sm:max-w-[180px]">
+          <label className="block text-xs text-forest-500 mb-1.5">Speed (ms per slide)</label>
+          <input type="number" min="1000" step="500" value={autoplaySpeed} onChange={e => setAutoplaySpeed(e.target.value)}
+            disabled={!autoplay} className="input disabled:opacity-50" placeholder="5000" />
+        </div>
+        <button type="submit" disabled={savingAutoplay} className="btn-gold text-sm">
+          {savingAutoplay ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Save Autoplay Settings
+        </button>
+      </form>
 
       <div className="relative max-w-xs">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-forest-300" />

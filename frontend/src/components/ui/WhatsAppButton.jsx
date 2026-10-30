@@ -1,7 +1,7 @@
 // Floating WhatsApp chat button — lets parents ask quick questions before buying.
 // Inspired by pegasusforkids.com per the Clever Cat scope document (§3.6).
 // NOTE: replace the placeholder number below with Clever Cat's real WhatsApp number.
-const WHATSAPP_NUMBER = '919876543210'
+const WHATSAPP_NUMBER = '919218171625'
 const WHATSAPP_MESSAGE = "Hi! I've got a quick question about a product on Clever Cat."
 
 export default function WhatsAppButton() {

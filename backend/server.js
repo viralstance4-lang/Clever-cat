@@ -38,6 +38,7 @@ const shopVideoRoutes   = require('./src/routes/shopVideos');
 const testimonialRoutes = require('./src/routes/testimonials');
 const priceRangeRoutes  = require('./src/routes/priceRanges');
 const announcementRoutes = require('./src/routes/announcements');
+const homepageSectionRoutes = require('./src/routes/homepageSections');
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -182,32 +183,25 @@ app.use('/api/shop-videos', shopVideoRoutes);
 app.use('/api/testimonials', testimonialRoutes);
 app.use('/api/price-ranges', priceRangeRoutes);
 app.use('/api/announcements', announcementRoutes);
+app.use('/api/homepage-sections', homepageSectionRoutes);
 
-// SMTP test endpoint — admin only
+// Resend test endpoint — admin only
 const { protect, adminOnly } = require('./src/middleware/auth');
 app.get('/api/test-email', protect, adminOnly, async (req, res) => {
   const to = req.query.to;
   if (!to) return res.json({ error: 'Pass ?to=email@gmail.com' });
   try {
-    const nodemailer = require('nodemailer');
-    const t = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: false,
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-      tls: { rejectUnauthorized: false },
-      connectionTimeout: 15000,
-      greetingTimeout: 15000,
-    });
-    await t.sendMail({
-      from: `"Clever Cat" <${process.env.SMTP_USER}>`,
+    const { sendResendEmail } = require('./src/services/resendMailer');
+    await sendResendEmail({
       to,
       subject: 'Test Email — Clever Cat',
-      html: '<p>Email is working from Render via Brevo! ✅</p>',
+      html: '<p>Email is working via Resend! ✅</p>',
+      fromName: process.env.FROM_NAME || 'Clever Cat',
+      fromEmail: process.env.FROM_EMAIL,
     });
     res.json({ success: true, message: `Sent to ${to}` });
   } catch (err) {
-    res.json({ success: false, error: err.message, code: err.code });
+    res.json({ success: false, error: err.message });
   }
 });
 

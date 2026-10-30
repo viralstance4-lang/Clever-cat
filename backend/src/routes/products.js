@@ -24,7 +24,7 @@ router.get('/', cachePublic, getAllProducts);
 router.get('/featured', cachePublic, getFeaturedProducts);
 
 // Admin routes (specific paths before wildcard /:slug)
-router.post('/upload/images', protect, adminOnly, upload.array('images', 5), uploadProductImages);
+router.post('/upload/images', protect, adminOnly, upload.array('images', 10), uploadProductImages);
 router.post('/', protect, adminOnly, createProduct);
 
 // Wildcard param routes last

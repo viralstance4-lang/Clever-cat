@@ -1,8 +1,10 @@
 import { useState, useMemo, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import { SlidersHorizontal, X, ChevronDown, Search } from 'lucide-react'
 import ProductCard from '../components/ui/ProductCard'
 import api from '../api'
+
+const isExternalUrl = (url) => /^https?:\/\//i.test(url || '')
 
 // Age groups are loaded from the API (same active age-group cards as homepage)
 const SORTS    = [
@@ -16,7 +18,7 @@ const SORTS    = [
 // Hoisted out of ShopPage — defining this inline in the render body created a
 // brand-new component type on every render, so React remounted the whole
 // panel (and dropped focus from the search input) on every keystroke.
-function FilterPanel({ search, setSearch, categories, category, setCategory, ageGroups, ageGroup, setAgeGroup, maxPrice, setMaxPrice, hasFilters, resetFilters }) {
+function FilterPanel({ search, setSearch, categories, category, setCategory, ageGroups, ageGroup, setAgeGroup, priceRanges, minPrice, maxPrice, setPriceRange, hasFilters, resetFilters }) {
   return (
     <div className="space-y-6">
       <div className="relative">
@@ -29,11 +31,19 @@ function FilterPanel({ search, setSearch, categories, category, setCategory, age
         <div className="space-y-1">
           {['All', ...categories.map(c => c.slug)].map((slug, i) => {
             const cat = categories.find(c => c.slug === slug)
+            const className = `w-full text-left text-sm px-3 py-2 rounded-xl transition-colors flex items-center gap-2 ${category === slug ? 'bg-forest-100 text-forest-900 font-semibold' : 'text-forest-700 hover:bg-forest-100'}`
+            const label = i === 0 ? 'All' : cat?.name
+            // A category with an admin-set custom link redirects there instead of filtering in-page
+            if (cat?.link) {
+              return isExternalUrl(cat.link) ? (
+                <a key={slug} href={cat.link} target="_blank" rel="noopener noreferrer" className={className}>{label}</a>
+              ) : (
+                <Link key={slug} to={cat.link} className={className}>{label}</Link>
+              )
+            }
             return (
-              <button key={slug} onClick={() => setCategory(slug)}
-                className={`w-full text-left text-sm px-3 py-2 rounded-xl transition-colors flex items-center gap-2 ${category === slug ? 'bg-forest-100 text-forest-900 font-semibold' : 'text-forest-700 hover:bg-forest-100'}`}>
-                {cat && <span>{cat.emoji}</span>}
-                {i === 0 ? 'All' : cat?.name}
+              <button key={slug} onClick={() => setCategory(slug)} className={className}>
+                {label}
               </button>
             )
           })}
@@ -51,11 +61,19 @@ function FilterPanel({ search, setSearch, categories, category, setCategory, age
         </div>
       </div>
       <div>
-        <p className="text-forest-800 font-semibold text-sm mb-3">Max Price: <span className="text-forest-800 font-bold">₹{maxPrice}</span></p>
-        <input type="range" min={0} max={999} step={50} value={maxPrice}
-          onChange={e => setMaxPrice(Number(e.target.value))}
-          className="w-full accent-forest-800" />
-        <div className="flex justify-between text-xs text-forest-400 mt-1"><span>₹0</span><span>₹999</span></div>
+        <p className="text-forest-800 font-semibold text-sm mb-3">Price</p>
+        <div className="space-y-1">
+          <button onClick={() => setPriceRange(0, 999)}
+            className={`w-full text-left text-sm px-3 py-2 rounded-xl transition-colors ${minPrice === 0 && maxPrice === 999 ? 'bg-forest-100 text-forest-900 font-semibold' : 'text-forest-700 hover:bg-forest-100'}`}>
+            All
+          </button>
+          {priceRanges.map(p => (
+            <button key={p._id} onClick={() => setPriceRange(p.minPrice || 0, p.maxPrice)}
+              className={`w-full text-left text-sm px-3 py-2 rounded-xl transition-colors ${minPrice === (p.minPrice || 0) && maxPrice === p.maxPrice ? 'bg-forest-100 text-forest-900 font-semibold' : 'text-forest-700 hover:bg-forest-100'}`}>
+              {p.label}
+            </button>
+          ))}
+        </div>
       </div>
       {hasFilters && (
         <button onClick={resetFilters} className="w-full btn-outline-gold text-sm py-2">Reset Filters</button>
@@ -71,11 +89,41 @@ export default function ShopPage() {
   const [sort, setSort]         = useState(searchParams.get('sort') || 'popular')
   const [category, setCategory] = useState(searchParams.get('category') || 'All')
   const [ageGroup, setAgeGroup] = useState(searchParams.get('ageGroup') || 'All')
+  const [minPrice, setMinPrice] = useState(Number(searchParams.get('minPrice')) || 0)
   const [maxPrice, setMaxPrice] = useState(Number(searchParams.get('maxPrice')) || 999)
+  const [bestsellerOnly, setBestsellerOnly] = useState(searchParams.get('bestseller') === 'true')
   const [products, setProducts] = useState([])
   const [ageGroups, setAgeGroups] = useState([])
   const [categories, setCategories] = useState([])
+  const [priceRanges, setPriceRanges] = useState([])
   const [loading, setLoading] = useState(true)
+
+  // Re-sync from the URL when a filter link (category, age group, search,
+  // sort, price) is clicked again while already on /shop — React Router
+  // doesn't remount this component just because the query string changed,
+  // so the initial useState above only fires once and would otherwise
+  // ignore later navbar/homepage clicks.
+  useEffect(() => {
+    setCategory(searchParams.get('category') || 'All')
+  }, [searchParams.get('category')])
+  useEffect(() => {
+    setAgeGroup(searchParams.get('ageGroup') || 'All')
+  }, [searchParams.get('ageGroup')])
+  useEffect(() => {
+    setSearch(searchParams.get('search') || '')
+  }, [searchParams.get('search')])
+  useEffect(() => {
+    setSort(searchParams.get('sort') || 'popular')
+  }, [searchParams.get('sort')])
+  useEffect(() => {
+    setMinPrice(Number(searchParams.get('minPrice')) || 0)
+  }, [searchParams.get('minPrice')])
+  useEffect(() => {
+    setMaxPrice(Number(searchParams.get('maxPrice')) || 999)
+  }, [searchParams.get('maxPrice')])
+  useEffect(() => {
+    setBestsellerOnly(searchParams.get('bestseller') === 'true')
+  }, [searchParams.get('bestseller')])
 
   useEffect(() => {
     setLoading(true)
@@ -92,24 +140,38 @@ export default function ShopPage() {
     api.get('/categories')
       .then(({ data }) => setCategories(data.categories || []))
       .catch(() => setCategories([]))
+    api.get('/price-ranges/active')
+      .then(({ data }) => setPriceRanges(data.priceRanges || []))
+      .catch(() => setPriceRanges([]))
   }, [])
 
   const filtered = useMemo(() => {
     let list = products.filter(p => p.isActive)
-    if (search)              list = list.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+    if (search) {
+      const q = search.trim().toLowerCase()
+      list = list.filter(p =>
+        p.name?.toLowerCase().includes(q) ||
+        p.tagline?.toLowerCase().includes(q) ||
+        p.author?.toLowerCase().includes(q) ||
+        p.tags?.some(t => t.toLowerCase().includes(q)) ||
+        p.categories?.some(c => c.toLowerCase().includes(q))
+      )
+    }
     if (category !== 'All')  list = list.filter(p => p.categories?.includes(category))
     if (ageGroup !== 'All')  list = list.filter(p => p.ageGroups?.includes(ageGroup))
-    list = list.filter(p => p.price <= maxPrice)
+    if (bestsellerOnly)      list = list.filter(p => p.isBestseller)
+    list = list.filter(p => p.price >= minPrice && p.price <= maxPrice)
     if (sort === 'newest')     return [...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     if (sort === 'price_asc')  return [...list].sort((a, b) => a.price - b.price)
     if (sort === 'price_desc') return [...list].sort((a, b) => b.price - a.price)
     if (sort === 'rating')     return [...list].sort((a, b) => b.ratings.average - a.ratings.average)
-    return [...list].sort((a, b) => b.ratings.count - a.ratings.count)
-  }, [products, search, category, ageGroup, maxPrice, sort])
+    return [...list].sort((a, b) => (b.sold || 0) - (a.sold || 0)) // Popularity — best-selling first
+  }, [products, search, category, ageGroup, bestsellerOnly, minPrice, maxPrice, sort])
 
-  const resetFilters = () => { setCategory('All'); setAgeGroup('All'); setSearch(''); setMaxPrice(999) }
-  const hasFilters = category !== 'All' || ageGroup !== 'All' || search || maxPrice < 999
-  const filterPanelProps = { search, setSearch, categories, category, setCategory, ageGroups, ageGroup, setAgeGroup, maxPrice, setMaxPrice, hasFilters, resetFilters }
+  const setPriceRange = (min, max) => { setMinPrice(min); setMaxPrice(max) }
+  const resetFilters = () => { setCategory('All'); setAgeGroup('All'); setSearch(''); setMinPrice(0); setMaxPrice(999); setBestsellerOnly(false) }
+  const hasFilters = category !== 'All' || ageGroup !== 'All' || search || minPrice > 0 || maxPrice < 999 || bestsellerOnly
+  const filterPanelProps = { search, setSearch, categories, category, setCategory, ageGroups, ageGroup, setAgeGroup, priceRanges, minPrice, maxPrice, setPriceRange, hasFilters, resetFilters }
 
   return (
     <div className="min-h-screen">
@@ -151,7 +213,13 @@ export default function ShopPage() {
               <div className="flex flex-wrap gap-2 mb-5">
                 {category !== 'All' && <span className="badge-green flex items-center gap-1">{categories.find(c => c.slug === category)?.name || category}<button onClick={() => setCategory('All')}><X size={11} /></button></span>}
                 {ageGroup !== 'All' && <span className="badge-gold flex items-center gap-1">{ageGroup}<button onClick={() => setAgeGroup('All')}><X size={11} /></button></span>}
-                {maxPrice < 999 && <span className="badge-gold flex items-center gap-1">Under ₹{maxPrice}<button onClick={() => setMaxPrice(999)}><X size={11} /></button></span>}
+                {bestsellerOnly && <span className="badge-gold flex items-center gap-1">Bestsellers<button onClick={() => setBestsellerOnly(false)}><X size={11} /></button></span>}
+                {(minPrice > 0 || maxPrice < 999) && (
+                  <span className="badge-gold flex items-center gap-1">
+                    {minPrice > 0 ? `₹${minPrice} – ₹${maxPrice}` : `Under ₹${maxPrice}`}
+                    <button onClick={() => { setMinPrice(0); setMaxPrice(999) }}><X size={11} /></button>
+                  </span>
+                )}
               </div>
             )}
 

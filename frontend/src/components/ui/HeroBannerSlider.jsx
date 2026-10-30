@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowRight, CheckCircle, ChevronLeft, ChevronRight, Star, Sparkles } from 'lucide-react'
 import api from '../../api'
+import { cldOptimize } from '../../utils/cloudinary'
 
-const AUTOPLAY_MS = 5000
 const SWIPE_THRESHOLD = 50
 
 const isExternalUrl = (url) => /^https?:\/\//i.test(url || '')
@@ -23,7 +23,7 @@ function Twinkle({ className, size = 20, delay = '0s', variant: Icon = Star }) {
 // never breaks/looks empty even before the admin configures any slides.
 function StaticHero() {
   return (
-    <section className="relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #42307B 0%, #1D1538 100%)' }}>
+    <section className="relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #42307B 0%, #3D1868 100%)' }}>
       {/* dot-grid texture */}
       <div className="absolute inset-0 opacity-10"
         style={{ backgroundImage: 'radial-gradient(#fff 1.5px, transparent 1.5px)', backgroundSize: '28px 28px' }}
@@ -79,8 +79,9 @@ function StaticHero() {
             <div className="absolute inset-0 rounded-full opacity-30 blur-3xl"
               style={{ background: 'radial-gradient(circle, #D59051 0%, transparent 70%)' }} />
             <img
-              src="/logo-white.png"
+              src={cldOptimize('https://res.cloudinary.com/eob3oguc/image/upload/v1793086126/clevercat/branding/logo-white.png', 400)}
               alt="Clever Cat"
+              fetchpriority="high"
               className="relative w-full h-full object-contain drop-shadow-2xl"
             />
             {/* Floating badges */}
@@ -111,6 +112,8 @@ export default function HeroBannerSlider() {
   const [loading, setLoading] = useState(true)
   const [current, setCurrent] = useState(0)
   const [paused, setPaused] = useState(false)
+  const [autoplay, setAutoplay] = useState(true)
+  const [autoplayMs, setAutoplayMs] = useState(5000)
   const navigate = useNavigate()
   const touchStartX = useRef(null)
 
@@ -119,6 +122,12 @@ export default function HeroBannerSlider() {
       .then(({ data }) => setBanners(data.banners || []))
       .catch(() => setBanners([]))
       .finally(() => setLoading(false))
+    api.get('/settings')
+      .then(({ data }) => {
+        if (data.settings?.bannerAutoplay !== undefined) setAutoplay(data.settings.bannerAutoplay)
+        if (data.settings?.bannerAutoplaySpeed !== undefined) setAutoplayMs(data.settings.bannerAutoplaySpeed)
+      })
+      .catch(() => {})
   }, [])
 
   const total = banners.length
@@ -127,12 +136,12 @@ export default function HeroBannerSlider() {
     setCurrent(((index % total) + total) % total)
   }, [total])
 
-  // Autoplay — paused on hover and when there's only one slide
+  // Autoplay — admin-controlled ON/OFF + speed, paused on hover and when there's only one slide
   useEffect(() => {
-    if (total <= 1 || paused) return
-    const timer = setInterval(() => setCurrent(c => (c + 1) % total), AUTOPLAY_MS)
+    if (total <= 1 || paused || !autoplay) return
+    const timer = setInterval(() => setCurrent(c => (c + 1) % total), autoplayMs)
     return () => clearInterval(timer)
-  }, [total, paused])
+  }, [total, paused, autoplay, autoplayMs])
 
   const handleTouchStart = (e) => { touchStartX.current = e.touches[0].clientX }
   const handleTouchEnd = (e) => {
@@ -163,7 +172,7 @@ export default function HeroBannerSlider() {
 
   return (
     <section
-      className="relative overflow-hidden bg-forest-900 group"
+      className="relative overflow-hidden bg-forest-900 group min-h-[420px] md:min-h-[560px]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onTouchStart={handleTouchStart}
@@ -175,14 +184,15 @@ export default function HeroBannerSlider() {
       >
         <picture>
           {banner.mobileImage && (
-            <source media="(max-width: 767px)" srcSet={banner.mobileImage} />
+            <source media="(max-width: 767px)" srcSet={cldOptimize(banner.mobileImage, 900)} />
           )}
           <img
-            src={banner.desktopImage}
+            src={cldOptimize(banner.desktopImage, 1920)}
             alt={banner.altText || banner.title}
             title={banner.title}
             className="w-full h-auto block"
             loading={current === 0 ? 'eager' : 'lazy'}
+            fetchpriority={current === 0 ? 'high' : undefined}
           />
         </picture>
 

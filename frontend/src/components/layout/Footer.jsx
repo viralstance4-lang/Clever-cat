@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Phone, Mail, MapPin, Heart, Star, BookOpen, PenLine, Send } from 'lucide-react'
 import api from '../../api'
+import { cldOptimize } from '../../utils/cloudinary'
 import { VisaIcon, MastercardIcon, UpiIcon, RazorpayIcon, CodIcon } from '../ui/PaymentIcons'
 
 const InstagramIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
 const FacebookIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+const YoutubeIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="currentColor" stroke="none"/></svg>
 
 export default function Footer() {
   const [policies, setPolicies] = useState([])
@@ -35,16 +37,16 @@ export default function Footer() {
         {/* Brand */}
         <div>
           <div className="mb-4">
-            <img src="/logo-white.png" alt="Clever Cat" className="h-28 w-28 object-contain" />
+            <img src={cldOptimize('https://res.cloudinary.com/eob3oguc/image/upload/v1793086126/clevercat/branding/logo-white.png', 220)} alt="Clever Cat" loading="lazy" className="h-28 w-28 object-contain" />
           </div>
           <p className="text-sm leading-relaxed text-white/70 mb-5">
             Beautifully designed children's books, activity books, puzzles and learning products that spark creativity and learning.
           </p>
           <div className="flex gap-3">
-            {/* TODO: replace with Clever Cat's real social links */}
             {[
-              { icon: <InstagramIcon />, href: '#' },
-              { icon: <FacebookIcon />, href: '#' },
+              { icon: <InstagramIcon />, href: 'https://www.instagram.com/clevercatindia?stkn=MWYwYzM0M2gycnAwdg==' },
+              { icon: <FacebookIcon />, href: 'https://www.facebook.com/share/1PrYhyRz3D/?mibextid=wwXIfr' },
+              { icon: <YoutubeIcon />, href: 'https://youtube.com/@clevercatindia?si=xkXupT1pXRwFOLYi' },
             ].map((s, i) => (
               <a key={i} href={s.href} target="_blank" rel="noopener noreferrer"
                 className="w-9 h-9 rounded-full border border-white/15 flex items-center justify-center hover:border-gold-accent hover:text-gold-accent transition-colors">
@@ -91,21 +93,21 @@ export default function Footer() {
               <Phone size={16} className="text-gold-accent flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs text-white/50 mb-0.5">Call / WhatsApp</p>
-                <a href="tel:+919876543210" className="text-sm hover:text-gold-accent">+91 98765 43210</a>
+                <a href="tel:+919218171625" className="text-sm hover:text-gold-accent">+91 92181 71625</a>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <Mail size={16} className="text-gold-accent flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs text-white/50 mb-0.5">Email</p>
-                <a href="mailto:clevercat@gmail.com" className="text-sm hover:text-gold-accent">clevercat@gmail.com</a>
+                <a href="mailto:coordination@theclevercat.in" className="text-sm hover:text-gold-accent">coordination@theclevercat.in</a>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <MapPin size={16} className="text-gold-accent flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs text-white/50 mb-0.5">Delivery</p>
-                <p className="text-sm">Pan India — 3 to 5 Business Days</p>
+                <p className="text-sm">Pan India — 5 to 7 Business Days</p>
               </div>
             </div>
           </div>
@@ -126,7 +128,10 @@ export default function Footer() {
 
       <div className="border-t border-white/10 py-6 px-4 text-center">
         <p className="text-white/50 text-xs">
-          © {new Date().getFullYear()} Clever Cat. All rights reserved.
+          © {new Date().getFullYear()} Clever Cat. All rights reserved. · Developed by{' '}
+          <a href="https://virallstance.com/" target="_blank" rel="noopener noreferrer" className="hover:text-gold-accent transition-colors">
+            Virall Stance Global Pvt. Ltd.
+          </a>
         </p>
       </div>
     </footer>

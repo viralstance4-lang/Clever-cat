@@ -21,6 +21,7 @@ const emptyProduct = {
   name: '', tagline: '', description: '', categories: [], categoryIds: [],
   ageGroups: [],
   author: '', illustrator: '', pages: '', isbn: '', language: 'English', specifications: '',
+  seriesName: '', titleName: '', noOfTitles: '', size: '', binding: '', extras: '',
   tags: '',
   price: '', comparePrice: '', costPrice: '',
   discountType: 'none', discountValue: '0',
@@ -29,7 +30,7 @@ const emptyProduct = {
   contents: [''],
   videoUrl: '',
   packageVariants: [],
-  isFeatured: false, isBestseller: false, isActive: true,
+  isFeatured: false, isBestseller: false, isActive: true, isComingSoon: false,
   seoTitle: '', seoDescription: '',
 }
 
@@ -47,7 +48,7 @@ function ImageManager({ images, setImages, uploading, onUpload, onReplaceCover }
   const [pickerOpen, setPickerOpen] = useState(false)
 
   const addFromLibrary = (picked) => {
-    const remaining = 5 - images.length
+    const remaining = 10 - images.length
     const toAdd = picked.slice(0, remaining).map(m => ({ url: m.url, public_id: m.publicId || null }))
     setImages(prev => [...prev, ...toAdd])
     setPickerOpen(false)
@@ -79,7 +80,7 @@ function ImageManager({ images, setImages, uploading, onUpload, onReplaceCover }
     <div className="card p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-forest-700 uppercase tracking-wider">Product Images</h2>
-        <span className="text-xs text-forest-400">{images.length}/5 · drag to reorder · first = cover</span>
+        <span className="text-xs text-forest-400">{images.length}/10 · drag to reorder · first = cover</span>
       </div>
       <div className="flex flex-wrap gap-3">
         {images.map((img, i) => (
@@ -110,16 +111,16 @@ function ImageManager({ images, setImages, uploading, onUpload, onReplaceCover }
             </div>
           </div>
         ))}
-        {images.length < 5 && (
+        {images.length < 10 && (
           <label className={`w-24 h-24 rounded-xl border-2 border-dashed border-forest-200 flex flex-col items-center justify-center cursor-pointer hover:border-forest-600 hover:bg-forest-50 transition-all ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
             {uploading ? <Loader2 size={22} className="text-forest-800 animate-spin" /> : <>
               <Upload size={18} className="text-forest-300 mb-1" />
               <span className="text-[10px] text-forest-400">Upload</span>
             </>}
-            <input type="file" accept="image/*" multiple className="hidden" onChange={onUpload} disabled={uploading || images.length >= 5} />
+            <input type="file" accept="image/*" multiple className="hidden" onChange={onUpload} disabled={uploading || images.length >= 10} />
           </label>
         )}
-        {images.length < 5 && (
+        {images.length < 10 && (
           <button type="button" onClick={() => setPickerOpen(true)} disabled={uploading}
             className="w-24 h-24 rounded-xl border-2 border-dashed border-forest-200 flex flex-col items-center justify-center cursor-pointer hover:border-forest-600 hover:bg-forest-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
             <FolderOpen size={18} className="text-forest-300 mb-1" />
@@ -127,7 +128,7 @@ function ImageManager({ images, setImages, uploading, onUpload, onReplaceCover }
           </button>
         )}
       </div>
-      <p className="text-xs text-forest-400">Max 5 images · JPG/PNG/WebP · 5 MB each</p>
+      <p className="text-xs text-forest-400">Max 10 images · JPG/PNG/WebP · 5 MB each</p>
 
       {pickerOpen && (
         <MediaPicker type="image" multiple onSelect={addFromLibrary} onClose={() => setPickerOpen(false)} />
@@ -248,7 +249,7 @@ export default function AdminProductForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.name || !form.tagline || !form.description) return toast.error('Name, tagline & description are required')
+    if (!form.name || !form.description) return toast.error('Name & description are required')
     if (form.discountType === 'none' && !form.price) return toast.error('Selling price is required')
     for (const pv of form.packageVariants) {
       if (!pv.label?.trim()) continue
@@ -266,7 +267,7 @@ export default function AdminProductForm() {
         discountValue: Number(form.discountValue),
         stock: Number(form.stock),
         weight: form.weight ? Number(form.weight) : undefined,
-        pages: form.pages ? Number(form.pages) : undefined,
+        pages: form.pages || undefined,
         images,
         tags: form.tags.split(',').map(s => s.trim()).filter(Boolean),
         contents: form.contents.map(s => s.trim()).filter(Boolean),
@@ -323,8 +324,8 @@ export default function AdminProductForm() {
             <input name="name" value={form.name} onChange={handleChange} className="input" placeholder="101 Bedtime Stories — Illustrated Story Book" required />
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-xs text-forest-500 mb-1.5">Tagline *</label>
-            <input name="tagline" value={form.tagline} onChange={handleChange} className="input" placeholder="A treasury of gentle tales for bedtime" required />
+            <label className="block text-xs text-forest-500 mb-1.5">Tagline</label>
+            <input name="tagline" value={form.tagline} onChange={handleChange} className="input" placeholder="A treasury of gentle tales for bedtime" />
           </div>
           <div>
             <MultiSelect
@@ -354,24 +355,36 @@ export default function AdminProductForm() {
             />
           </div>
           <div>
-            <label className="block text-xs text-forest-500 mb-1.5">Author</label>
-            <input name="author" value={form.author} onChange={handleChange} className="input" placeholder="Ananya Desai" />
+            <label className="block text-xs text-forest-500 mb-1.5">Series Name</label>
+            <input name="seriesName" value={form.seriesName} onChange={handleChange} className="input" placeholder="My Fun Activity Series" />
           </div>
           <div>
-            <label className="block text-xs text-forest-500 mb-1.5">Illustrator</label>
-            <input name="illustrator" value={form.illustrator} onChange={handleChange} className="input" placeholder="Rohan Mehta" />
+            <label className="block text-xs text-forest-500 mb-1.5">Title Name</label>
+            <input name="titleName" value={form.titleName} onChange={handleChange} className="input" placeholder="Jungle Adventure" />
+          </div>
+          <div>
+            <label className="block text-xs text-forest-500 mb-1.5">No. of Titles</label>
+            <input name="noOfTitles" value={form.noOfTitles} onChange={handleChange} className="input" placeholder="4" />
+          </div>
+          <div>
+            <label className="block text-xs text-forest-500 mb-1.5">Book Code</label>
+            <input name="isbn" value={form.isbn} onChange={handleChange} className="input" placeholder="MCB-003" />
+          </div>
+          <div>
+            <label className="block text-xs text-forest-500 mb-1.5">Size</label>
+            <input name="size" value={form.size} onChange={handleChange} className="input" placeholder="21 x 21 cm" />
           </div>
           <div>
             <label className="block text-xs text-forest-500 mb-1.5">Pages</label>
-            <input name="pages" type="number" min="0" value={form.pages} onChange={handleChange} className="input" placeholder="32" />
+            <input name="pages" type="text" inputMode="numeric" value={form.pages} onChange={handleChange} className="input" placeholder="32" />
           </div>
           <div>
-            <label className="block text-xs text-forest-500 mb-1.5">ISBN</label>
-            <input name="isbn" value={form.isbn} onChange={handleChange} className="input" placeholder="978-93-00000-00-0" />
+            <label className="block text-xs text-forest-500 mb-1.5">Binding</label>
+            <input name="binding" value={form.binding} onChange={handleChange} className="input" placeholder="Paperback" />
           </div>
           <div>
-            <label className="block text-xs text-forest-500 mb-1.5">Language</label>
-            <input name="language" value={form.language} onChange={handleChange} className="input" placeholder="English" />
+            <label className="block text-xs text-forest-500 mb-1.5">Extras</label>
+            <input name="extras" value={form.extras} onChange={handleChange} className="input" placeholder="Includes stickers & crayons" />
           </div>
           <div className="sm:col-span-2">
             <label className="block text-xs text-forest-500 mb-1.5">Description *</label>
@@ -447,6 +460,7 @@ export default function AdminProductForm() {
             { key: 'isFeatured', label: 'Featured on Homepage' },
             { key: 'isBestseller', label: 'Mark as Bestseller' },
             { key: 'isActive', label: 'Active (visible)' },
+            { key: 'isComingSoon', label: 'Coming Soon' },
           ].map(({ key, label }) => (
             <label key={key} className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" name={key} checked={form[key]} onChange={handleChange} className="accent-forest-800 w-4 h-4" />
@@ -528,7 +542,7 @@ export default function AdminProductForm() {
       {/* What's Inside */}
       <div className="card p-6 space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-forest-700 uppercase tracking-wider">What's Inside</h2>
+          <h2 className="text-sm font-semibold text-forest-700 uppercase tracking-wider">Skill Motor</h2>
           <button type="button" onClick={() => setForm(f => ({ ...f, contents: [...f.contents, ''] }))}
             className="text-xs text-forest-800 hover:text-forest-900 flex items-center gap-1 font-medium">
             <Plus size={12} /> Add

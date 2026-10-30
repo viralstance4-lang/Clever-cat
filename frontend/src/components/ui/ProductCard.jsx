@@ -3,6 +3,7 @@ import { ShoppingCart, Heart, Star } from 'lucide-react'
 import useCartStore from '../../store/cartStore'
 import useWishlist from '../../hooks/useWishlist'
 import toast from 'react-hot-toast'
+import { cldOptimize } from '../../utils/cloudinary'
 
 export default function ProductCard({ product }) {
   const addItem = useCartStore(s => s.addItem)
@@ -18,6 +19,7 @@ export default function ProductCard({ product }) {
 
   const handleAddToCart = (e) => {
     e.preventDefault()
+    if (product.isComingSoon) return
     addItem(product)
     toast.success(`${product.name} added to cart!`)
     if (window.fbq) window.fbq('track', 'AddToCart', {
@@ -35,11 +37,11 @@ export default function ProductCard({ product }) {
   }
 
   return (
-    <Link to={`/shop/${product.slug}`} className="card group block">
+    <Link to={`/shop/${product.slug}`} className="card group flex flex-col h-full">
       {/* Image */}
       <div className="relative overflow-hidden rounded-t-2xl aspect-square bg-forest-50">
         <img
-          src={product.images?.[0]?.url || '/logo.png'}
+          src={cldOptimize(product.images?.[0]?.url, 500) || '/logo.png'}
           alt={product.images?.[0]?.alt || product.name}
           loading="lazy"
           onError={e => { e.target.onerror = null; e.target.src = '/logo.png' }}
@@ -47,6 +49,9 @@ export default function ProductCard({ product }) {
         />
         {/* Badges overlay */}
         <div className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 flex flex-col gap-1 sm:gap-2">
+          {product.isComingSoon && (
+            <span className="bg-forest-700 text-white text-[8px] sm:text-xs font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full whitespace-nowrap">COMING SOON</span>
+          )}
           {product.isBestseller && (
             <span className="bg-forest-900 text-forest-300 text-[8px] sm:text-xs font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full whitespace-nowrap">BESTSELLER</span>
           )}
@@ -67,31 +72,33 @@ export default function ProductCard({ product }) {
       </div>
 
       {/* Content */}
-      <div className="p-4">
-        {product.concerns?.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-2">
-            {product.concerns.map(concern => (
-              <span key={concern} className="badge-green text-xs">{concern}</span>
-            ))}
-          </div>
-        )}
-        <h3 className="font-semibold text-forest-900 text-sm mb-1 leading-snug line-clamp-2">{product.name}</h3>
-        <p className="text-forest-500 text-xs mb-3 line-clamp-1">{product.tagline}</p>
-
-        {/* Ratings */}
-        {product.ratings?.count > 0 && (
-          <div className="flex items-center gap-1 mb-3">
-            <div className="flex text-gold-accent">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} size={12} fill={i < Math.round(product.ratings.average) ? 'currentColor' : 'none'} />
+      <div className="p-4 flex flex-col flex-1">
+        <div className="flex-1">
+          {product.concerns?.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {product.concerns.map(concern => (
+                <span key={concern} className="badge-green text-xs">{concern}</span>
               ))}
             </div>
-            <span className="text-xs text-forest-500">({product.ratings.count})</span>
-          </div>
-        )}
+          )}
+          <h3 className="font-semibold text-forest-900 text-sm mb-1 leading-snug line-clamp-2">{product.name}</h3>
+          <p className="text-forest-500 text-xs mb-3 line-clamp-1">{product.tagline}</p>
+
+          {/* Ratings */}
+          {product.ratings?.count > 0 && (
+            <div className="flex items-center gap-1 mb-3">
+              <div className="flex text-gold-accent">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} size={12} fill={i < Math.round(product.ratings.average) ? 'currentColor' : 'none'} />
+                ))}
+              </div>
+              <span className="text-xs text-forest-500">({product.ratings.count})</span>
+            </div>
+          )}
+        </div>
 
         {/* Price + Add to cart */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mt-auto pt-2">
           <div>
             {cheapestPkg ? (
               <>
@@ -112,8 +119,9 @@ export default function ProductCard({ product }) {
           </div>
           <button
             onClick={handleAddToCart}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-white flex-shrink-0 hover:scale-110 transition-transform"
-            style={{ background: 'linear-gradient(135deg,#4F29A3,#1D1538)' }}
+            disabled={product.isComingSoon}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-white flex-shrink-0 hover:scale-110 transition-transform disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+            style={{ background: 'linear-gradient(135deg,#4F29A3,#3D1868)' }}
           >
             <ShoppingCart size={16} />
           </button>

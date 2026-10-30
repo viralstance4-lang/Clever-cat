@@ -4,7 +4,7 @@ const connectDB = require('../config/db');
 
 const ANNOUNCEMENTS = [
   { text: 'Flat 10% off your first order', link: '/shop', icon: 'Percent', displayOrder: 0 },
-  { text: 'Free Shipping above ₹499', link: '/policy/shipping', icon: 'Truck', displayOrder: 1 },
+  { text: 'Free Shipping on Books above ₹499', link: '/policy/shipping', icon: 'Truck', displayOrder: 1 },
   { text: 'Loved by Parents Everywhere', link: '/about', icon: 'Star', displayOrder: 2 },
 ];
 

@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Outlet, Navigate, useLocation } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { Toaster } from 'react-hot-toast'
 
 function ScrollToTop() {
@@ -13,48 +13,66 @@ function ScrollToTop() {
 import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
 import WhatsAppButton from './components/ui/WhatsAppButton'
+// Core conversion-path pages — kept eager since a homepage visitor is likely
+// to hit these in quick succession.
 import HomePage from './pages/HomePage'
 import ShopPage from './pages/ShopPage'
 import ProductPage from './pages/ProductPage'
 import CartPage from './pages/CartPage'
 import CheckoutPage from './pages/CheckoutPage'
-import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
-import ProfilePage from './pages/ProfilePage'
-import OrdersPage from './pages/OrdersPage'
-import AboutPage from './pages/AboutPage'
-import ContactPage from './pages/ContactPage'
-import BlogPage from './pages/BlogPage'
-import BlogDetail from './pages/BlogDetailPage'
-import PolicyPage from './pages/PolicyPage'
+
+// Secondary pages — lazy-loaded so their code isn't in the bundle every
+// homepage visitor downloads.
+const LoginPage    = lazy(() => import('./pages/LoginPage'))
+const RegisterPage = lazy(() => import('./pages/RegisterPage'))
+const ProfilePage  = lazy(() => import('./pages/ProfilePage'))
+const OrdersPage   = lazy(() => import('./pages/OrdersPage'))
+const AboutPage    = lazy(() => import('./pages/AboutPage'))
+const IQJuniorPage = lazy(() => import('./pages/IQJuniorPage'))
+const ContactPage  = lazy(() => import('./pages/ContactPage'))
+const BlogPage     = lazy(() => import('./pages/BlogPage'))
+const BlogDetail   = lazy(() => import('./pages/BlogDetailPage'))
+const PolicyPage   = lazy(() => import('./pages/PolicyPage'))
 import AdminRoute from './components/auth/AdminRoute'
-import AdminLayout from './components/admin/AdminLayout'
-import AdminDashboard from './pages/admin/AdminDashboard'
-import AdminProducts from './pages/admin/AdminProducts'
-import AdminProductForm from './pages/admin/AdminProductForm'
-import AdminBlogs from './pages/admin/AdminBlogs'
-import AdminBlogForm from './pages/admin/AdminBlogForm'
-import AdminBlogCategories from './pages/admin/AdminBlogCategories'
-import AdminBlogTags from './pages/admin/AdminBlogTags'
-import AdminOrders from './pages/admin/AdminOrders'
-import AdminUsers from './pages/admin/AdminUsers'
-import AdminCoupons from './pages/admin/AdminCoupons'
-import AdminSettings from './pages/admin/AdminSettings'
-import AdminCategories from './pages/admin/AdminCategories'
-import AdminFAQs from './pages/admin/AdminFAQs'
-import AdminReviews from './pages/admin/AdminReviews'
-import AdminPolicies from './pages/admin/AdminPolicies'
-import AdminMedia from './pages/admin/AdminMedia'
-import AdminLogos from './pages/admin/AdminLogos'
-import AdminBanners from './pages/admin/AdminBanners'
-import AdminConcerns from './pages/admin/AdminConcerns'
-import AdminShopVideos from './pages/admin/AdminShopVideos'
-import AdminTestimonials from './pages/admin/AdminTestimonials'
-import AdminPriceRanges from './pages/admin/AdminPriceRanges'
-import AdminEnquiries from './pages/admin/AdminEnquiries'
-import AdminPaymentSettings from './pages/admin/AdminPaymentSettings'
-import AdminAnnouncements from './pages/admin/AdminAnnouncements'
 import ThankYouPage from './pages/ThankYouPage'
+
+// Admin panel is never visited by customers — lazy-load it so its code isn't
+// part of the bundle every storefront visitor downloads.
+const AdminLayout            = lazy(() => import('./components/admin/AdminLayout'))
+const AdminDashboard         = lazy(() => import('./pages/admin/AdminDashboard'))
+const AdminProducts          = lazy(() => import('./pages/admin/AdminProducts'))
+const AdminProductForm       = lazy(() => import('./pages/admin/AdminProductForm'))
+const AdminBlogs             = lazy(() => import('./pages/admin/AdminBlogs'))
+const AdminBlogForm          = lazy(() => import('./pages/admin/AdminBlogForm'))
+const AdminBlogCategories    = lazy(() => import('./pages/admin/AdminBlogCategories'))
+const AdminBlogTags          = lazy(() => import('./pages/admin/AdminBlogTags'))
+const AdminOrders            = lazy(() => import('./pages/admin/AdminOrders'))
+const AdminUsers             = lazy(() => import('./pages/admin/AdminUsers'))
+const AdminCoupons           = lazy(() => import('./pages/admin/AdminCoupons'))
+const AdminSettings          = lazy(() => import('./pages/admin/AdminSettings'))
+const AdminCategories        = lazy(() => import('./pages/admin/AdminCategories'))
+const AdminFAQs              = lazy(() => import('./pages/admin/AdminFAQs'))
+const AdminReviews           = lazy(() => import('./pages/admin/AdminReviews'))
+const AdminPolicies          = lazy(() => import('./pages/admin/AdminPolicies'))
+const AdminMedia             = lazy(() => import('./pages/admin/AdminMedia'))
+const AdminLogos             = lazy(() => import('./pages/admin/AdminLogos'))
+const AdminBanners           = lazy(() => import('./pages/admin/AdminBanners'))
+const AdminConcerns          = lazy(() => import('./pages/admin/AdminConcerns'))
+const AdminShopVideos        = lazy(() => import('./pages/admin/AdminShopVideos'))
+const AdminTestimonials      = lazy(() => import('./pages/admin/AdminTestimonials'))
+const AdminPriceRanges       = lazy(() => import('./pages/admin/AdminPriceRanges'))
+const AdminHomepageSections  = lazy(() => import('./pages/admin/AdminHomepageSections'))
+const AdminEnquiries         = lazy(() => import('./pages/admin/AdminEnquiries'))
+const AdminPaymentSettings   = lazy(() => import('./pages/admin/AdminPaymentSettings'))
+const AdminAnnouncements     = lazy(() => import('./pages/admin/AdminAnnouncements'))
+
+function AdminFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="w-10 h-10 border-4 border-forest-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+}
 
 function SiteLayout() {
   return (
@@ -63,7 +81,9 @@ function SiteLayout() {
       {/* pb reserves space for the footer's wavy top edge (absolute + -translate-y-full,
           h-14/h-24) so it overlaps blank space instead of clipping page content. */}
       <main className="flex-1 pb-14 md:pb-24">
-        <Outlet />
+        <Suspense fallback={null}>
+          <Outlet />
+        </Suspense>
       </main>
       <Footer />
       <WhatsAppButton />
@@ -78,7 +98,7 @@ export default function App() {
       <Toaster
         position="top-center"
         toastOptions={{
-          style: { background: '#FCFCFD', color: '#1D1538', border: '1px solid #42307B' },
+          style: { background: '#FCF8F0', color: '#3D1868', border: '1px solid #42307B' },
         }}
       />
       <Routes>
@@ -96,6 +116,7 @@ export default function App() {
           <Route path="/profile"      element={<ProfilePage />} />
           <Route path="/orders"       element={<OrdersPage />} />
           <Route path="/about"        element={<AboutPage />} />
+          <Route path="/iq-junior"    element={<IQJuniorPage />} />
           <Route path="/contact"      element={<ContactPage />} />
           <Route path="/blog"         element={<Navigate to="/blogs" replace />} />
           <Route path="/blogs"        element={<BlogPage />} />
@@ -103,7 +124,7 @@ export default function App() {
           <Route path="/policy/:slug" element={<PolicyPage />} />
         </Route>
 
-        <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
+        <Route path="/admin" element={<AdminRoute><Suspense fallback={<AdminFallback />}><AdminLayout /></Suspense></AdminRoute>}>
           <Route index                    element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard"         element={<AdminDashboard />} />
           <Route path="products"          element={<AdminProducts />} />
@@ -130,6 +151,7 @@ export default function App() {
           <Route path="testimonials"      element={<AdminTestimonials />} />
           <Route path="announcements"     element={<AdminAnnouncements />} />
           <Route path="price-ranges"      element={<AdminPriceRanges />} />
+          <Route path="homepage-builder"  element={<AdminHomepageSections />} />
           <Route path="settings"          element={<AdminSettings />} />
           <Route path="payment-settings"  element={<AdminPaymentSettings />} />
         </Route>

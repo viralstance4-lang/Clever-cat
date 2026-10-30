@@ -26,6 +26,9 @@ const couponSchema = new mongoose.Schema(
     // ── Rules ─────────────────────────────────────────────────────────────────
     minOrderValue:     { type: Number, default: 0 },   // minimum cart subtotal to apply
     maxDiscountAmount: { type: Number, default: 0 },   // cap for % discounts (0 = no cap)
+    // Restricts this coupon to customers who have never placed an order before
+    // (checked by account, and by email for guest checkouts).
+    firstOrderOnly:    { type: Boolean, default: false },
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
     isActive:   { type: Boolean, default: true },

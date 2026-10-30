@@ -13,6 +13,7 @@ const {
   updateSiteLogo,
   updateFaqsEnabled,
   updateShopVideoHeading,
+  updateBannerAutoplay,
 } = require('../controllers/shippingController');
 
 // Logo upload — Cloudinary if configured, else local disk
@@ -52,5 +53,6 @@ router.put('/logo',     protect, adminOnly, logoUpload.single('logo'), updateSit
 router.put('/shipping', protect, adminOnly, updateShipping);
 router.put('/faqs',     protect, adminOnly, updateFaqsEnabled);
 router.put('/shop-video-heading', protect, adminOnly, updateShopVideoHeading);
+router.put('/banner-autoplay', protect, adminOnly, updateBannerAutoplay);
 
 module.exports = router;

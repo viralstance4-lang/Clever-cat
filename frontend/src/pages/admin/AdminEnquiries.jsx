@@ -109,6 +109,9 @@ export default function AdminEnquiries() {
                   <a href={`mailto:${selected.email}`} className="text-xs text-forest-500 hover:text-forest-800">{selected.email}</a>
                 </div>
               </div>
+              {selected.subject && (
+                <p className="text-sm text-forest-600"><span className="font-semibold text-forest-800">Subject:</span> {selected.subject}</p>
+              )}
               {selected.phone && (
                 <p className="text-sm text-forest-600 flex items-center gap-2"><Phone size={14} /> {selected.phone}</p>
               )}

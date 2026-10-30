@@ -25,7 +25,7 @@ export default function ThankYouPage() {
 
   if (!state?.orderId) return null
 
-  const { orderId, total, createdAt, emailSent } = state
+  const { orderId, total, createdAt, emailSent, items } = state
 
   const orderDate = createdAt
     ? new Date(createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -98,13 +98,38 @@ export default function ThankYouPage() {
                 <span className="text-forest-500">Order Date</span>
                 <span className="font-medium text-forest-900">{orderDate}</span>
               </div>
-              {total != null && (
-                <div className="flex justify-between items-center text-sm pt-3 border-t border-forest-100">
-                  <span className="text-forest-600 font-medium">Total Amount</span>
-                  <span className="font-bold text-forest-900 text-lg">₹{total.toLocaleString('en-IN')}</span>
-                </div>
-              )}
             </div>
+
+            {items?.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-forest-100 space-y-3">
+                {items.map((item, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    {item.image && (
+                      <img src={item.image} alt={item.name} className="w-14 h-14 rounded-lg object-cover flex-shrink-0 bg-forest-50" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-forest-900 truncate">
+                        {item.name}
+                        {item.isFreeGift && (
+                          <span className="ml-2 inline-block px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white bg-pink-500 rounded-full align-middle">Free Gift</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-forest-400">Qty: {item.quantity}</p>
+                    </div>
+                    <span className="text-sm font-semibold text-forest-900 flex-shrink-0">
+                      {item.isFreeGift ? 'FREE' : `₹${(item.price * item.quantity).toLocaleString('en-IN')}`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {total != null && (
+              <div className="flex justify-between items-center text-sm pt-4 mt-4 border-t border-forest-100">
+                <span className="text-forest-600 font-medium">Total Amount</span>
+                <span className="font-bold text-forest-900 text-lg">₹{total.toLocaleString('en-IN')}</span>
+              </div>
+            )}
           </div>
 
           {/* Actions */}

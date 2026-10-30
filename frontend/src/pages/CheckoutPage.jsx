@@ -13,6 +13,7 @@ const STATES = ['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisga
 export default function CheckoutPage() {
   const { items, coupon, setCoupon, clearCart } = useCartStore()
   const user                         = useAuthStore(s => s.user)
+  const updateUser                   = useAuthStore(s => s.updateUser)
   const navigate                     = useNavigate()
 
   const [step, setStep]     = useState(0)
@@ -21,13 +22,38 @@ export default function CheckoutPage() {
   const [couponLoading, setCouponLoading] = useState(false)
   const [payMethod, setPayMethod] = useState('razorpay')
   const [paySettings, setPaySettings] = useState(null)
-  const [shipSettings, setShipSettings] = useState({ prepaidFreeThreshold: 499, prepaidCharge: 79, codEnabled: true, codThreshold: 499, codChargeBelow: 79, codChargeAbove: 20, giftWrapEnabled: true, giftWrapPrice: 49 })
+  const [shipSettings, setShipSettings] = useState({ prepaidFreeThreshold: 499, prepaidCharge: 79, codEnabled: true, codThreshold: 499, codChargeBelow: 79, codChargeAbove: 20, giftWrapEnabled: true, giftWrapPrice: 49, magazineCategorySlug: 'kids-magazine', magazineShippingCharge: 400 })
   const [isGift, setIsGift] = useState(false)
   const [giftMessage, setGiftMessage] = useState('')
-  const [address, setAddress] = useState({
-    name: user?.name || '', phone: user?.phone || '', email: user?.email || '',
-    line1: '', line2: '', city: '', state: '', pincode: '',
+  // Pre-fill from the customer's saved default address (if any) so returning
+  // customers don't have to retype it every order.
+  const [address, setAddress] = useState(() => {
+    const saved = user?.addresses?.find(a => a.isDefault) || user?.addresses?.[0]
+    return {
+      name: saved?.name || user?.name || '', phone: saved?.phone || user?.phone || '', email: user?.email || '',
+      line1: saved?.line1 || '', line2: saved?.line2 || '',
+      city: saved?.city || '', state: saved?.state || '', pincode: saved?.pincode || '',
+    }
   })
+
+  // Save this address to the customer's account after a successful order, so
+  // it's there to pre-fill next time. Best-effort — never blocks checkout.
+  const saveAddressForAccount = async () => {
+    if (!user) return
+    const isDuplicate = (user.addresses || []).some(a =>
+      a.line1 === address.line1 && a.city === address.city &&
+      a.pincode === address.pincode && a.phone === address.phone
+    )
+    if (isDuplicate) return
+    try {
+      const { data } = await api.post('/auth/address', {
+        name: address.name, phone: address.phone,
+        line1: address.line1, line2: address.line2,
+        city: address.city, state: address.state, pincode: address.pincode,
+      })
+      updateUser({ ...user, addresses: data.addresses })
+    } catch (_) { /* non-critical — address was already used for this order */ }
+  }
 
   useEffect(() => {
     api.get('/payment-settings')
@@ -54,14 +80,66 @@ export default function CheckoutPage() {
   }, [paySettings])
 
   const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0)
+
+  // Auto-apply coupons (admin-configured "Auto" mode) — re-checked once the
+  // email is typed too, since a firstOrderOnly coupon can only be confirmed for
+  // a guest once we know who they are. Never overrides an already-applied coupon.
+  useEffect(() => {
+    if (coupon || subtotal <= 0) return
+    const t = setTimeout(() => {
+      api.post('/coupons/auto-apply', { subtotal, email: address.email || undefined })
+        .then(({ data }) => {
+          if (data.coupon) {
+            setCoupon({
+              code:               data.coupon.code,
+              discountType:       data.coupon.type,
+              discountValue:      data.coupon.rate,
+              maxDiscountAmount:  data.coupon.maxDiscountAmount || 0,
+              giftProduct:        data.coupon.giftProduct || null,
+            })
+            toast.success(`Coupon applied! ${data.coupon.description || `You saved ₹${data.coupon.discount}`}`)
+          }
+        })
+        .catch(() => {})
+    }, 400)
+    return () => clearTimeout(t)
+  }, [subtotal, coupon, address.email])
+
+  // Re-validate an already-applied coupon once the email is known/changes —
+  // a firstOrderOnly coupon can arrive from the Cart page auto-apply before
+  // any identity is known, so it has to be rechecked here and removed if this
+  // customer (by email) has already used it on a previous order.
+  useEffect(() => {
+    if (!coupon?.code || !address.email) return
+    const t = setTimeout(() => {
+      api.post('/coupons/validate', { code: coupon.code, subtotal, email: address.email })
+        .catch(() => {
+          setCoupon(null)
+          toast.error('Your applied coupon is no longer valid for this order and has been removed.')
+        })
+    }, 400)
+    return () => clearTimeout(t)
+  }, [coupon?.code, address.email, subtotal])
+
   const discount = coupon
     ? coupon.discountType === 'percentage'
       ? Math.min(Math.round(subtotal * coupon.discountValue / 100), coupon.maxDiscountAmount || Infinity)
       : coupon.discountValue
     : 0
-  const shipping = (payMethod === 'cod' || payMethod === 'partial_cod')
-    ? (subtotal >= shipSettings.codThreshold ? shipSettings.codChargeAbove : shipSettings.codChargeBelow)
-    : (subtotal >= shipSettings.prepaidFreeThreshold ? 0 : shipSettings.prepaidCharge)
+
+  // Magazines (e.g. IQ Junior) ship separately — flat surcharge, never counted
+  // toward (or eligible for) the free-shipping-above-threshold offer. Matches
+  // backend/src/controllers/shippingController.js:calculateShipping exactly.
+  const isMagazine = (item) => item.product?.categories?.includes(shipSettings.magazineCategorySlug)
+  const bookItems = items.filter(i => !isMagazine(i))
+  const hasMagazine = items.some(isMagazine)
+  const bookSubtotal = bookItems.reduce((s, i) => s + i.price * i.qty, 0)
+  const bookShipping = bookItems.length > 0
+    ? ((payMethod === 'cod' || payMethod === 'partial_cod')
+        ? (bookSubtotal >= shipSettings.codThreshold ? shipSettings.codChargeAbove : shipSettings.codChargeBelow)
+        : (bookSubtotal >= shipSettings.prepaidFreeThreshold ? 0 : shipSettings.prepaidCharge))
+    : 0
+  const shipping = bookShipping + (hasMagazine ? shipSettings.magazineShippingCharge : 0)
   const giftWrapCharge = (isGift && shipSettings.giftWrapEnabled) ? Number(shipSettings.giftWrapPrice || 0) : 0
   const total    = subtotal - discount + shipping + giftWrapCharge
 
@@ -74,7 +152,7 @@ export default function CheckoutPage() {
     if (!couponCode.trim()) return
     setCouponLoading(true)
     try {
-      const { data } = await api.post('/coupons/validate', { code: couponCode.trim(), subtotal })
+      const { data } = await api.post('/coupons/validate', { code: couponCode.trim(), subtotal, email: address.email || undefined })
       setCoupon({
         code:               data.coupon.code,
         discountType:       data.coupon.type,
@@ -119,6 +197,7 @@ export default function CheckoutPage() {
 
       if (payMethod === 'cod') {
         const { data } = await api.post('/orders', orderPayload)
+        saveAddressForAccount()
         clearCart()
         if (window.fbq) window.fbq('track', 'Purchase', { value: data.order.total, currency: 'INR' })
         navigate('/thank-you', {
@@ -127,6 +206,7 @@ export default function CheckoutPage() {
             total:     data.order.total,
             createdAt: data.order.createdAt,
             emailSent: data.emailSent,
+            items:     data.order.items,
           },
           replace: true,
         })
@@ -153,6 +233,7 @@ export default function CheckoutPage() {
         order_id: rzpOrder.razorpayOrderId,
         handler: async ({ razorpay_order_id, razorpay_payment_id, razorpay_signature }) => {
           const { data: verifyData } = await api.post('/payments/razorpay/verify', { razorpay_order_id, razorpay_payment_id, razorpay_signature, orderId: order._id })
+          saveAddressForAccount()
           clearCart()
           if (window.fbq) window.fbq('track', 'Purchase', { value: order.total, currency: 'INR' })
           navigate('/thank-you', {
@@ -161,6 +242,7 @@ export default function CheckoutPage() {
               total:     order.total,
               createdAt: order.createdAt,
               emailSent: verifyData.emailSent,
+              items:     order.items,
             },
             replace: true,
           })

@@ -7,9 +7,30 @@ import {
 import useCartStore from '../../store/cartStore'
 import useAuthStore from '../../store/authStore'
 import api from '../../api'
+import { cldOptimize } from '../../utils/cloudinary'
 
 const ANNOUNCEMENT_ICONS = {
   Leaf, Truck, Star, Gift, Percent, Sparkles, Heart, Tag, ShieldCheck, Clock, Phone, BadgePercent,
+}
+
+const isExternalUrl = (url) => /^https?:\/\//i.test(url || '')
+
+// Category cards/menu entries respect an optional admin-set custom `link`,
+// falling back to the default /shop?category=slug destination.
+function CategoryLink({ category, onClick, className, children }) {
+  const target = category.link || `/shop?category=${category.slug}`
+  if (isExternalUrl(target)) {
+    return (
+      <a href={target} target="_blank" rel="noopener noreferrer" onClick={onClick} className={className}>
+        {children}
+      </a>
+    )
+  }
+  return (
+    <Link to={target} onClick={onClick} className={className}>
+      {children}
+    </Link>
+  )
 }
 
 // External / tel / mailto links use a plain <a>; internal routes (starting with "/") use <Link>.
@@ -123,9 +144,9 @@ export default function Navbar() {
       {/* Announcement bar — admin-managed, always-scrolling marquee */}
       <div className="bg-gradient-to-r from-forest-800 via-forest-900 to-forest-800 text-cream-50 text-xs">
         <div className="max-w-7xl mx-auto flex items-center gap-4 px-4 sm:px-6 py-2.5">
-          <a href="tel:+919876543210" className="flex items-center gap-1.5 font-medium tracking-wide text-cream-100 hover:text-gold-accent transition-colors duration-200 flex-shrink-0">
+          <a href="tel:+919218171625" className="flex items-center gap-1.5 font-medium tracking-wide text-cream-100 hover:text-gold-accent transition-colors duration-200 flex-shrink-0">
             <Phone size={13} />
-            <span className="hidden sm:inline">+91 98765 43210</span>
+            <span className="hidden sm:inline">+91 92181 71625</span>
           </a>
 
           {announcements.length > 0 && (
@@ -150,7 +171,7 @@ export default function Navbar() {
 
           {/* Logo */}
           <Link to="/" className="flex items-center flex-shrink-0 group">
-            <img src="/logo.png" alt="Clever Cat" className="h-20 w-20 sm:h-24 sm:w-24 object-contain transition-transform duration-300 group-hover:scale-105" />
+            <img src={cldOptimize('https://res.cloudinary.com/eob3oguc/image/upload/v1793086126/clevercat/branding/logo.png', 200)} alt="Clever Cat" fetchpriority="high" className="h-20 w-20 sm:h-24 sm:w-24 object-contain transition-transform duration-300 group-hover:scale-105" />
           </Link>
 
           {/* Desktop nav links — centered */}
@@ -179,18 +200,18 @@ export default function Navbar() {
                           const children = childrenOf(cat.slug)
                           return (
                             <li key={cat._id}>
-                              <Link to={`/shop?category=${cat.slug}`} onClick={() => setShopMenuOpen(false)}
+                              <CategoryLink category={cat} onClick={() => setShopMenuOpen(false)}
                                 className="flex items-center gap-1.5 text-sm font-semibold text-forest-900 hover:text-gold-accent hover:bg-forest-50 px-4 py-2">
-                                <span>{cat.emoji}</span> {cat.name}
-                              </Link>
+                                {cat.name}
+                              </CategoryLink>
                               {children.length > 0 && (
                                 <ul>
                                   {children.map(child => (
                                     <li key={child._id}>
-                                      <Link to={`/shop?category=${child.slug}`} onClick={() => setShopMenuOpen(false)}
+                                      <CategoryLink category={child} onClick={() => setShopMenuOpen(false)}
                                         className="block text-xs text-forest-600 hover:text-forest-900 hover:bg-forest-50 pl-9 pr-4 py-1.5">
                                         {child.name}
-                                      </Link>
+                                      </CategoryLink>
                                     </li>
                                   ))}
                                 </ul>
@@ -314,7 +335,7 @@ export default function Navbar() {
                         <li key={p._id}>
                           <button type="button" onClick={() => goToSuggestion(p)}
                             className="w-full flex items-center gap-3 px-5 py-3 hover:bg-forest-50 text-left transition-colors">
-                            <img src={p.images?.[0]?.url || '/logo.png'} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                            <img src={cldOptimize(p.images?.[0]?.url, 80) || '/logo.png'} alt="" loading="lazy" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
                             <span className="flex-1 min-w-0">
                               <span className="block text-sm font-medium text-forest-900 truncate">{p.name}</span>
                               <span className="block text-xs text-forest-500">₹{p.price}</span>
@@ -362,18 +383,18 @@ export default function Navbar() {
                     <div className="pb-3 pl-3 space-y-3">
                       {topLevelCategories.map(cat => (
                         <div key={cat._id}>
-                          <Link to={`/shop?category=${cat.slug}`} onClick={() => setMenuOpen(false)}
+                          <CategoryLink category={cat} onClick={() => setMenuOpen(false)}
                             className="text-sm font-semibold text-forest-800 flex items-center gap-1.5">
-                            <span>{cat.emoji}</span> {cat.name}
-                          </Link>
+                            {cat.name}
+                          </CategoryLink>
                           {childrenOf(cat.slug).length > 0 && (
                             <ul className="mt-1.5 ml-5 space-y-1.5">
                               {childrenOf(cat.slug).map(child => (
                                 <li key={child._id}>
-                                  <Link to={`/shop?category=${child.slug}`} onClick={() => setMenuOpen(false)}
+                                  <CategoryLink category={child} onClick={() => setMenuOpen(false)}
                                     className="text-xs text-forest-500 flex items-center gap-1">
                                     <ChevronRight size={10} /> {child.name}
-                                  </Link>
+                                  </CategoryLink>
                                 </li>
                               ))}
                             </ul>

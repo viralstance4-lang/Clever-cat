@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
+/* Poppins is loaded via <link> in index.html (not @import here) so the browser
+   can fetch it in parallel instead of blocking on this stylesheet first. */
 
 /* Brand primary heading font — Pangram Pangram Foundry, self-hosted (not on Google Fonts) */
 @font-face {
@@ -17,8 +18,8 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
   body {
-    background-color: #FCFCFD;
-    color: #1D1538;
+    background-color: #FCF8F0;
+    color: #3D1868;
     font-family: 'Poppins', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
@@ -51,7 +52,7 @@
   }
   .card {
     @apply bg-forest-50 rounded-2xl transition-all duration-300;
-    box-shadow: 0 2px 16px rgba(29,21,56,0.08);
+    box-shadow: 0 2px 16px rgba(61,24,104,0.08);
   }
   .card:hover {
     box-shadow: 0 4px 24px rgba(66,48,123,0.2);
@@ -106,6 +107,13 @@
 }
 
 @layer utilities {
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
   @keyframes marquee {
     from { transform: translateX(0); }
     to   { transform: translateX(-50%); }

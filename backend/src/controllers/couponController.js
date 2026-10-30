@@ -1,6 +1,24 @@
 const Coupon = require('../models/Coupon');
+const Order = require('../models/Order');
 
 // ─── Shared validation helper ─────────────────────────────────────────────────
+// True if this account (by user id) or this email (guest checkouts) has ever
+// placed an order before — used to gate firstOrderOnly coupons. Matches email
+// against both shippingAddress.email (always set — the checkout form requires
+// it regardless of login state) and guestInfo.email, case-insensitively, since
+// neither field is normalised to lowercase on save.
+async function hasOrderedBefore({ userId, email }) {
+  const conditions = [];
+  if (userId) conditions.push({ user: userId });
+  if (email) {
+    const re = new RegExp(`^${email.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+    conditions.push({ 'shippingAddress.email': re });
+    conditions.push({ 'guestInfo.email': re });
+  }
+  if (conditions.length === 0) return false; // no identity to check — caller decides how to treat this
+  return !!(await Order.exists({ $or: conditions }));
+}
+
 function computeDiscount(coupon, subtotal) {
   let amount = 0;
   if (coupon.discountType === 'free_gift') {
@@ -41,6 +59,19 @@ exports.validateCoupon = async (req, res) => {
       success: false,
       message: `Minimum order of ₹${coupon.minOrderValue.toLocaleString('en-IN')} required for this coupon`,
     });
+  }
+  if (coupon.firstOrderOnly) {
+    const email = req.body.email || req.user?.email;
+    // No identity to check yet (anonymous guest, email not entered) — don't
+    // assume eligibility, since that's exactly how a repeat guest customer
+    // would keep seeing this coupon "work" on the cart page before checkout.
+    if (!req.user?.id && !email) {
+      return res.status(400).json({ success: false, message: 'Enter your email to check eligibility for this coupon' });
+    }
+    const ordered = await hasOrderedBefore({ userId: req.user?.id, email });
+    if (ordered) {
+      return res.status(400).json({ success: false, message: 'This coupon is valid only on your first order' });
+    }
   }
 
   // Free-gift coupons require the gift product to be in stock
@@ -101,9 +132,22 @@ exports.getAutoApplyCoupon = async (req, res) => {
     minOrderValue: { $gt: 0, $lte: subtotal },
   }).populate('giftProduct');
 
-  const eligible = candidates.filter(c =>
+  let eligible = candidates.filter(c =>
     c.discountType !== 'free_gift' || (c.giftProduct && c.giftProduct.stock > 0)
   );
+
+  if (eligible.some(c => c.firstOrderOnly)) {
+    const email = req.body.email || req.user?.email;
+    // No identity yet (anonymous guest on the cart page, before email is
+    // known) — exclude firstOrderOnly coupons rather than assuming eligible,
+    // otherwise a repeat guest customer sees it "auto-apply" on every visit.
+    if (!req.user?.id && !email) {
+      eligible = eligible.filter(c => !c.firstOrderOnly);
+    } else {
+      const ordered = await hasOrderedBefore({ userId: req.user?.id, email });
+      if (ordered) eligible = eligible.filter(c => !c.firstOrderOnly);
+    }
+  }
 
   let best = null;
   for (const c of eligible) {
@@ -123,13 +167,14 @@ exports.getAutoApplyCoupon = async (req, res) => {
       };
     }
     coupon = {
-      code:            best.code,
-      discount:        computeDiscount(best, subtotal),
-      type:            best.discountType,
-      rate:            best.discountValue,
-      description:     best.description,
-      minOrderValue:   best.minOrderValue,
-      applicationMode: best.applicationMode,
+      code:               best.code,
+      discount:           computeDiscount(best, subtotal),
+      type:               best.discountType,
+      rate:               best.discountValue,
+      maxDiscountAmount:  best.maxDiscountAmount || 0,
+      description:        best.description,
+      minOrderValue:      best.minOrderValue,
+      applicationMode:    best.applicationMode,
       giftProduct,
     };
   }
@@ -168,6 +213,7 @@ exports.createCoupon = async (req, res) => {
   const {
     code, description, discountType, discountValue, giftProduct,
     minOrderValue, maxDiscountAmount, isActive, usageLimit, expiresAt, applicationMode,
+    firstOrderOnly,
   } = req.body;
 
   if (!code?.trim())     return res.status(400).json({ success: false, message: 'Code is required' });
@@ -201,6 +247,7 @@ exports.createCoupon = async (req, res) => {
     isActive:          isActive          ?? true,
     usageLimit:        usageLimit        || 0,
     expiresAt:         expiresAt || undefined,
+    firstOrderOnly:    firstOrderOnly    ?? false,
   });
 
   res.status(201).json({ success: true, coupon });
@@ -242,11 +289,21 @@ exports.deleteCoupon = async (req, res) => {
 // the populated Product doc when the coupon is a free_gift type and the gift is
 // currently in stock, else null. couponType/applicationMode reflect the matched
 // coupon so the order can record exactly what was applied.
-exports.applyCouponToOrder = async (code, subtotal) => {
+exports.applyCouponToOrder = async (code, subtotal, identity = {}) => {
   if (!code) return { discount: 0, giftProduct: null, couponType: null, applicationMode: null };
 
   const now = new Date();
   const normalised = code.toUpperCase().trim();
+
+  // firstOrderOnly can't be checked inside the atomic update below (it depends
+  // on the separate Order collection), so gate it with a read first. The race
+  // window this leaves (same identity submitting two orders in the same instant)
+  // is negligible for a discount coupon.
+  const precheck = await Coupon.findOne({ code: normalised }).select('firstOrderOnly');
+  if (precheck?.firstOrderOnly) {
+    const ordered = await hasOrderedBefore(identity);
+    if (ordered) return { discount: 0, giftProduct: null, couponType: null, applicationMode: null };
+  }
 
   // Single atomic operation: match all validity conditions AND increment in one step
   const coupon = await Coupon.findOneAndUpdate(

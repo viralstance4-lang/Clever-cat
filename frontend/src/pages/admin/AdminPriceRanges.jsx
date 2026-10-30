@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
-import { Plus, Edit2, Trash2, Tag, X, Search, Loader2, ToggleLeft, ToggleRight, GripVertical } from 'lucide-react'
+import { Plus, Edit2, Trash2, Tag, X, Search, Loader2, ToggleLeft, ToggleRight, GripVertical, Image as ImageIcon } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../../api'
+import MediaInput from '../../components/admin/MediaInput'
 
-const emptyForm = { label: '', maxPrice: '', displayOrder: '0', isActive: true }
+const emptyForm = { label: '', minPrice: '0', maxPrice: '', imageUrl: '', displayOrder: '0', isActive: true }
 
 function PriceRangeModal({ priceRange, onClose, onSaved }) {
   const isEdit = !!priceRange
   const [form, setForm] = useState(() => priceRange ? {
     label: priceRange.label || '',
+    minPrice: String(priceRange.minPrice ?? 0),
     maxPrice: String(priceRange.maxPrice ?? ''),
+    imageUrl: priceRange.imageUrl || '',
     displayOrder: String(priceRange.displayOrder ?? 0),
     isActive: priceRange.isActive !== false,
   } : emptyForm)
@@ -24,11 +27,15 @@ function PriceRangeModal({ priceRange, onClose, onSaved }) {
     e.preventDefault()
     if (!form.label.trim()) return toast.error('Label is required')
     if (!(Number(form.maxPrice) > 0)) return toast.error('Max price must be greater than 0')
+    if (Number(form.minPrice) < 0) return toast.error('Min price cannot be negative')
+    if (Number(form.minPrice) >= Number(form.maxPrice)) return toast.error('Min price must be less than max price')
     setSaving(true)
     try {
       const payload = {
         label: form.label.trim(),
+        minPrice: Number(form.minPrice) || 0,
         maxPrice: Number(form.maxPrice),
+        imageUrl: form.imageUrl || '',
         displayOrder: Number(form.displayOrder) || 0,
         isActive: form.isActive,
       }
@@ -62,9 +69,26 @@ function PriceRangeModal({ priceRange, onClose, onSaved }) {
           </div>
 
           <div>
+            <label className="block text-xs text-forest-500 mb-1.5 flex items-center gap-1.5"><ImageIcon size={13} /> Card Image <span className="text-forest-400">(optional)</span></label>
+            <MediaInput
+              value={form.imageUrl}
+              onChange={(url) => setForm(f => ({ ...f, imageUrl: url }))}
+              accept="image"
+              layout="inline"
+              previewClassName="w-16 h-16 rounded-xl"
+              onRemove={() => setForm(f => ({ ...f, imageUrl: '' }))}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-forest-500 mb-1.5">Min Price (₹)</label>
+            <input name="minPrice" type="number" min="0" value={form.minPrice} onChange={handleChange} className="input" placeholder="0" />
+          </div>
+
+          <div>
             <label className="block text-xs text-forest-500 mb-1.5">Max Price (₹) *</label>
             <input name="maxPrice" type="number" min="1" value={form.maxPrice} onChange={handleChange} className="input" placeholder="199" required />
-            <p className="text-xs text-forest-400 mt-1">Clicking this button on the homepage filters the shop to products priced ₹{form.maxPrice || 'X'} or below.</p>
+            <p className="text-xs text-forest-400 mt-1">Clicking this button on the homepage filters the shop to products priced between ₹{form.minPrice || '0'} and ₹{form.maxPrice || 'X'}.</p>
           </div>
 
           <div>
@@ -167,7 +191,7 @@ export default function AdminPriceRanges() {
       </div>
 
       <div className="card p-4 text-sm text-forest-600 bg-forest-50/50 border border-forest-100">
-        Price ranges marked <span className="font-semibold">Active</span> appear as pill buttons below "Shop by Age" on the homepage, sorted by Display Order. Each button links to the shop page pre-filtered to products priced at or below its Max Price.
+        Price ranges marked <span className="font-semibold">Active</span> appear as pill buttons below "Shop by Age" on the homepage, sorted by Display Order. Each button links to the shop page pre-filtered to products priced between its Min and Max Price.
       </div>
 
       <div className="relative max-w-xs">
@@ -181,7 +205,7 @@ export default function AdminPriceRanges() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-forest-100">
-                {['', 'Label', 'Max Price', 'Status', 'Order', ''].map((h, i) => (
+                {['', 'Preview', 'Label', 'Min Price', 'Max Price', 'Status', 'Order', ''].map((h, i) => (
                   <th key={i} className="text-left px-4 py-3 text-xs font-semibold text-forest-500 uppercase tracking-wider whitespace-nowrap">
                     {h}
                   </th>
@@ -192,14 +216,14 @@ export default function AdminPriceRanges() {
               {loading ? (
                 Array.from({ length: 3 }).map((_, i) => (
                   <tr key={i} className="border-b border-forest-50">
-                    {Array.from({ length: 6 }).map((_, j) => (
+                    {Array.from({ length: 8 }).map((_, j) => (
                       <td key={j} className="px-4 py-3"><div className="h-4 bg-forest-100 rounded animate-pulse" style={{ width: `${50 + j * 4}%` }} /></td>
                     ))}
                   </tr>
                 ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-forest-400">
+                  <td colSpan={8} className="px-4 py-12 text-center text-forest-400">
                     <Tag size={28} className="mx-auto mb-2 opacity-50" />
                     No price ranges found. Click "Add Price Range" to create your first one.
                   </td>
@@ -216,8 +240,14 @@ export default function AdminPriceRanges() {
                 >
                   <td className="px-2 py-3 text-forest-300"><GripVertical size={16} /></td>
                   <td className="px-4 py-3">
+                    <div className="w-12 h-12 rounded-lg bg-forest-50 border border-forest-100 overflow-hidden flex items-center justify-center flex-shrink-0">
+                      {p.imageUrl ? <img src={p.imageUrl} alt={p.label} className="w-full h-full object-cover" /> : <Tag size={18} className="text-forest-300" />}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
                     <p className="font-medium text-forest-900">{p.label || <span className="text-forest-400 italic">Untitled</span>}</p>
                   </td>
+                  <td className="px-4 py-3 text-forest-600">₹{p.minPrice ?? 0}</td>
                   <td className="px-4 py-3 text-forest-600">₹{p.maxPrice}</td>
                   <td className="px-4 py-3">
                     <button onClick={() => toggleActive(p)} className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full transition-colors ${p.isActive ? 'badge-green' : 'bg-gray-200 text-gray-700'}`}>

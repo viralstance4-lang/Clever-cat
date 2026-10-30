@@ -9,7 +9,7 @@ export default function AdminRoute({ children }) {
 
   if (user.role !== 'admin') {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'linear-gradient(135deg,#FCFCFD,#D5C8EA)' }}>
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'linear-gradient(135deg,#FCF8F0,#D5C8EA)' }}>
         <div className="card p-10 text-center max-w-md">
           <ShieldAlert size={48} className="mx-auto text-red-500 mb-4" />
           <h1 className="text-2xl font-bold text-forest-900 mb-2">403 — Access Denied</h1>

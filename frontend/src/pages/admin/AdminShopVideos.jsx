@@ -8,7 +8,7 @@ const emptyForm = {
   title: '', badge: 'NEW', views: '0', displayOrder: '0', isActive: true,
 }
 
-function ProductPicker({ selected, onSelect }) {
+function ProductMultiPicker({ selected, onChange }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [open, setOpen] = useState(false)
@@ -26,54 +26,66 @@ function ProductPicker({ selected, onSelect }) {
     return () => clearTimeout(t)
   }, [query])
 
-  if (selected) {
-    return (
-      <div className="flex items-center gap-3 border border-forest-200 rounded-xl p-2.5 bg-forest-50">
-        <img src={selected.images?.[0]?.url} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0 bg-white" />
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-forest-900 truncate">{selected.name}</p>
-          <p className="text-xs text-forest-500">₹{selected.price}</p>
-        </div>
-        <button type="button" onClick={() => onSelect(null)} className="p-1.5 rounded-lg hover:bg-white text-forest-400 flex-shrink-0" title="Change product">
-          <X size={15} />
-        </button>
-      </div>
-    )
+  const addProduct = (p) => {
+    if (!selected.some(s => s._id === p._id)) onChange([...selected, p])
+    setOpen(false)
+    setQuery('')
   }
+  const removeProduct = (id) => onChange(selected.filter(s => s._id !== id))
+
+  const availableResults = results.filter(p => !selected.some(s => s._id === p._id))
 
   return (
-    <div className="relative">
-      <div className="relative">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-forest-300" />
-        <input
-          value={query}
-          onChange={e => { setQuery(e.target.value); setOpen(true) }}
-          onFocus={() => setOpen(true)}
-          className="input pl-9"
-          placeholder="Search product by name..."
-        />
-        {loading && <Loader2 size={15} className="animate-spin absolute right-3 top-1/2 -translate-y-1/2 text-forest-300" />}
-      </div>
-      {open && query.trim().length >= 2 && (
-        <div className="absolute z-20 mt-1 w-full bg-white border border-forest-100 rounded-xl shadow-lg max-h-64 overflow-y-auto">
-          {results.length === 0 && !loading ? (
-            <p className="px-4 py-3 text-sm text-forest-400">No products found</p>
-          ) : results.map(p => (
-            <button
-              type="button"
-              key={p._id}
-              onClick={() => { onSelect(p); setOpen(false); setQuery('') }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-forest-50 text-left transition-colors"
-            >
-              <img src={p.images?.[0]?.url} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0 bg-forest-50" />
+    <div className="space-y-2">
+      {selected.length > 0 && (
+        <div className="space-y-2">
+          {selected.map(p => (
+            <div key={p._id} className="flex items-center gap-3 border border-forest-200 rounded-xl p-2.5 bg-forest-50">
+              <img src={p.images?.[0]?.url} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0 bg-white" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-forest-900 truncate">{p.name}</p>
                 <p className="text-xs text-forest-500">₹{p.price}</p>
               </div>
-            </button>
+              <button type="button" onClick={() => removeProduct(p._id)} className="p-1.5 rounded-lg hover:bg-white text-forest-400 flex-shrink-0" title="Remove product">
+                <X size={15} />
+              </button>
+            </div>
           ))}
         </div>
       )}
+      <div className="relative">
+        <div className="relative">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-forest-300" />
+          <input
+            value={query}
+            onChange={e => { setQuery(e.target.value); setOpen(true) }}
+            onFocus={() => setOpen(true)}
+            className="input pl-9"
+            placeholder={selected.length ? 'Search to add another product...' : 'Search product by name...'}
+          />
+          {loading && <Loader2 size={15} className="animate-spin absolute right-3 top-1/2 -translate-y-1/2 text-forest-300" />}
+        </div>
+        {open && query.trim().length >= 2 && (
+          <div className="absolute z-20 mt-1 w-full bg-white border border-forest-100 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+            {availableResults.length === 0 && !loading ? (
+              <p className="px-4 py-3 text-sm text-forest-400">No products found</p>
+            ) : availableResults.map(p => (
+              <button
+                type="button"
+                key={p._id}
+                onClick={() => addProduct(p)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-forest-50 text-left transition-colors"
+              >
+                <img src={p.images?.[0]?.url} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0 bg-forest-50" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-forest-900 truncate">{p.name}</p>
+                  <p className="text-xs text-forest-500">₹{p.price}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -87,7 +99,7 @@ function ShopVideoModal({ video, onClose, onSaved }) {
     displayOrder: String(video.displayOrder ?? 0),
     isActive: video.isActive !== false,
   } : emptyForm)
-  const [product, setProduct] = useState(video?.product || null)
+  const [products, setProducts] = useState(video?.products || [])
   const [videoUrl, setVideoUrl] = useState(video?.videoUrl || '')
   const [saving, setSaving] = useState(false)
 
@@ -99,14 +111,14 @@ function ShopVideoModal({ video, onClose, onSaved }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!videoUrl) return toast.error('A video file is required')
-    if (!product) return toast.error('Please tag a product')
+    if (products.length === 0) return toast.error('Please tag at least one product')
     setSaving(true)
     try {
       const formData = new FormData()
       formData.append('title', form.title.trim())
       formData.append('badge', form.badge.trim() || 'NEW')
       formData.append('views', form.views || 0)
-      formData.append('product', product._id)
+      products.forEach(p => formData.append('products', p._id))
       formData.append('displayOrder', form.displayOrder || 0)
       formData.append('isActive', form.isActive ? 'true' : 'false')
       formData.append('video', videoUrl)
@@ -148,9 +160,9 @@ function ShopVideoModal({ video, onClose, onSaved }) {
           </div>
 
           <div>
-            <label className="block text-xs text-forest-500 mb-1.5 flex items-center gap-1.5"><Tag size={13} /> Tagged Product *</label>
-            <ProductPicker selected={product} onSelect={setProduct} />
-            <p className="text-xs text-forest-400 mt-1">Clicking the video on the storefront takes shoppers straight to this product.</p>
+            <label className="block text-xs text-forest-500 mb-1.5 flex items-center gap-1.5"><Tag size={13} /> Tagged Products *</label>
+            <ProductMultiPicker selected={products} onChange={setProducts} />
+            <p className="text-xs text-forest-400 mt-1">Tapping the video on the storefront shows all tagged products so shoppers can jump straight to any of them.</p>
           </div>
 
           <div>
@@ -229,7 +241,7 @@ export default function AdminShopVideos() {
   }
 
   const filtered = videos.filter(v =>
-    (v.title || v.product?.name || '').toLowerCase().includes(search.toLowerCase())
+    (v.title || v.products?.[0]?.name || '').toLowerCase().includes(search.toLowerCase())
   )
   const reorderable = !search
 
@@ -295,7 +307,7 @@ export default function AdminShopVideos() {
       </div>
 
       <div className="card p-4 text-sm text-forest-600 bg-forest-50/50 border border-forest-100">
-        Videos marked <span className="font-semibold">Active</span> appear in the "{heading}" carousel on the homepage. Each video is tagged to a product — tapping it opens a larger view with a "View Product" button linking straight to that product's page.
+        Videos marked <span className="font-semibold">Active</span> appear in the "{heading}" carousel on the homepage. Each video can be tagged to one or more products — tapping it opens a larger view listing every tagged product with a "View Product" link.
       </div>
 
       <form onSubmit={handleSaveHeading} className="card p-4 flex flex-col sm:flex-row sm:items-end gap-3">
@@ -363,10 +375,13 @@ export default function AdminShopVideos() {
                     <span className="text-[10px] font-semibold bg-forest-100 text-forest-700 px-2 py-0.5 rounded-full">{v.badge}</span>
                   </td>
                   <td className="px-4 py-3">
-                    {v.product ? (
+                    {v.products?.length > 0 ? (
                       <div className="flex items-center gap-2">
-                        <img src={v.product.images?.[0]?.url} alt="" className="w-8 h-8 rounded-lg object-cover bg-forest-50" />
-                        <span className="text-forest-700 truncate max-w-[140px]">{v.product.name}</span>
+                        <img src={v.products[0].images?.[0]?.url} alt="" className="w-8 h-8 rounded-lg object-cover bg-forest-50" />
+                        <span className="text-forest-700 truncate max-w-[140px]">{v.products[0].name}</span>
+                        {v.products.length > 1 && (
+                          <span className="text-[10px] font-semibold bg-forest-100 text-forest-700 px-1.5 py-0.5 rounded-full flex-shrink-0">+{v.products.length - 1}</span>
+                        )}
                       </div>
                     ) : <span className="text-red-400 text-xs">No product tagged</span>}
                   </td>

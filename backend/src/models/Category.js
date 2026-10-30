@@ -20,6 +20,9 @@ const categorySchema = new mongoose.Schema({
   emoji: { type: String, default: '✨' },
   color: { type: String, default: '#EC1380' },
   imageUrl: String,
+  // Optional custom redirect — when set, category cards/links go here instead
+  // of the default /shop?category=slug (e.g. to point at a standalone page).
+  link: { type: String, default: '', trim: true },
   status: {
     type: String,
     enum: ['draft', 'published'],

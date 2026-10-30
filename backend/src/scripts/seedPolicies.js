@@ -61,7 +61,7 @@ const POLICIES = [
 <p>We may update this Privacy Policy from time to time to reflect changes in our practices. The updated version will be posted on this page with a revised date.</p>
 
 <h2>10. Contact Us</h2>
-<p>If you have any questions about this Privacy Policy or how your data is handled, write to us at <a href="mailto:clevercat@gmail.com">clevercat@gmail.com</a> or call us at +91 98765 43210 (Mon–Sat, 9 AM – 7 PM).</p>
+<p>If you have any questions about this Privacy Policy or how your data is handled, write to us at <a href="mailto:coordination@theclevercat.in">coordination@theclevercat.in</a> or call us at +91 92181 71625 (Mon–Sat, 9 AM – 7 PM).</p>
 `.trim(),
   },
   {
@@ -128,7 +128,7 @@ const POLICIES = [
 <p>We may revise these Terms &amp; Conditions from time to time. Continued use of the website after changes are posted constitutes your acceptance of the updated terms.</p>
 
 <h2>15. Contact Us</h2>
-<p>For any questions regarding these Terms, reach us at <a href="mailto:clevercat@gmail.com">clevercat@gmail.com</a> or +91 98765 43210 (Mon–Sat, 9 AM – 7 PM).</p>
+<p>For any questions regarding these Terms, reach us at <a href="mailto:coordination@theclevercat.in">coordination@theclevercat.in</a> or +91 92181 71625 (Mon–Sat, 9 AM – 7 PM).</p>
 `.trim(),
   },
   {
@@ -144,7 +144,7 @@ const POLICIES = [
 <p>Orders are processed and handed over to our courier partner within 1–2 business days of confirmation. Orders placed on Sundays or public holidays are processed the next business day.</p>
 
 <h2>3. Delivery Timeline</h2>
-<p>Once shipped, most orders are delivered within <strong>3 to 5 business days</strong>, depending on your location. Deliveries to remote or non-serviceable pin codes may take a little longer.</p>
+<p>Once shipped, most orders are delivered within <strong>5 to 7 business days</strong>, depending on your location. Deliveries to remote or non-serviceable pin codes may take a little longer.</p>
 
 <h2>4. Shipping Charges</h2>
 <table>
@@ -171,10 +171,10 @@ const POLICIES = [
 <p>While we work hard to meet our delivery timelines, factors like weather, regional restrictions, courier delays or remote locations may occasionally cause delays beyond our control. We appreciate your patience and will keep you informed in such cases.</p>
 
 <h2>9. Damaged or Incorrect Items</h2>
-<p>Please inspect your package on delivery. If you receive a damaged, defective or incorrect item, contact us within 48 hours of delivery at <a href="mailto:clevercat@gmail.com">clevercat@gmail.com</a> along with your order number and photos of the item, and we'll arrange a replacement or refund promptly.</p>
+<p>Please inspect your package on delivery. If you receive a damaged, defective or incorrect item, contact us within 48 hours of delivery at <a href="mailto:coordination@theclevercat.in">coordination@theclevercat.in</a> along with your order number and photos of the item, and we'll arrange a replacement or refund promptly.</p>
 
 <h2>10. Need Help?</h2>
-<p>For any shipping-related questions, reach out to us at <a href="mailto:clevercat@gmail.com">clevercat@gmail.com</a> or call/WhatsApp us at +91 98765 43210 (Mon–Sat, 9 AM – 7 PM).</p>
+<p>For any shipping-related questions, reach out to us at <a href="mailto:coordination@theclevercat.in">coordination@theclevercat.in</a> or call/WhatsApp us at +91 92181 71625 (Mon–Sat, 9 AM – 7 PM).</p>
 `.trim(),
   },
 ];

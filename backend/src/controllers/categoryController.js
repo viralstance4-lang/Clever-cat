@@ -16,7 +16,7 @@ exports.getAllCategories = async (req, res) => {
 
 // POST /api/categories — admin
 exports.createCategory = async (req, res) => {
-  const { name, description, parentSlug, emoji, color, imageUrl, status, order } = req.body;
+  const { name, description, parentSlug, emoji, color, imageUrl, link, status, order } = req.body;
   if (!name?.trim()) {
     return res.status(400).json({ success: false, message: 'Category name is required' });
   }
@@ -26,7 +26,7 @@ exports.createCategory = async (req, res) => {
   if (existing) {
     return res.status(400).json({ success: false, message: `A category with this name already exists (slug: ${slug})` });
   }
-  const category = await Category.create({ name, description, parentSlug: parentSlug || null, emoji, color, imageUrl, status, order });
+  const category = await Category.create({ name, description, parentSlug: parentSlug || null, emoji, color, imageUrl, link, status, order });
   res.status(201).json({ success: true, category });
 };
 

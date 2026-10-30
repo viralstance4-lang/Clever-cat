@@ -13,7 +13,6 @@ const productSchema = new mongoose.Schema({
   },
   tagline: {
     type: String,
-    required: true,
   },
   description: {
     type: String,
@@ -33,10 +32,16 @@ const productSchema = new mongoose.Schema({
   },
   author: String,
   illustrator: String,
-  pages: Number,
+  pages: String,
   isbn: String,
   language: { type: String, default: 'English' },
   specifications: String,    // dimensions, binding, recommended-use notes, etc.
+  seriesName: String,
+  titleName: String,
+  noOfTitles: String,
+  size: String,
+  binding: String,
+  extras: String,
 
   // Product variants (e.g. 10g / 20g / 30 Capsules)
   variants: [
@@ -108,6 +113,7 @@ const productSchema = new mongoose.Schema({
   isFeatured: { type: Boolean, default: false },
   isActive: { type: Boolean, default: true },
   isBestseller: { type: Boolean, default: false },
+  isComingSoon: { type: Boolean, default: false },
   tags: [String],
   seoTitle: String,
   seoDescription: String,

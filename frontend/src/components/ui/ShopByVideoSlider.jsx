@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Play, Eye, X, ArrowRight, BookOpen } from 'lucide-react'
 import api from '../../api'
+import { cldOptimize } from '../../utils/cloudinary'
 
 const formatViews = (n) => {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
@@ -62,6 +63,13 @@ export default function ShopByVideoSlider() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lightboxIndex, videos.length])
 
+  const productRowRef = useRef(null)
+  const slideProducts = (dir) => {
+    const el = productRowRef.current
+    if (!el) return
+    el.scrollBy({ left: dir * (el.clientWidth * 0.8), behavior: 'smooth' })
+  }
+
   const touchStartX = useRef(null)
   const handleTouchStart = (e) => { touchStartX.current = e.touches[0].clientX }
   const handleTouchEnd = (e) => {
@@ -104,7 +112,8 @@ export default function ShopByVideoSlider() {
             const opacity = isCenter ? 1 : abs === 1 ? 0.55 : 0.3
             const spacing = 210
 
-            const product = v.product
+            const products = v.products || []
+            const product = products[0]
 
             return (
               <div
@@ -129,7 +138,7 @@ export default function ShopByVideoSlider() {
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                 ) : (
-                  <img src={v.thumbnailUrl} alt={v.title || product?.name} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+                  <img src={cldOptimize(v.thumbnailUrl, 440)} alt={v.title || product?.name} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/5 to-black/40" />
 
@@ -149,10 +158,13 @@ export default function ShopByVideoSlider() {
                 {product && (
                   <div className="absolute bottom-0 inset-x-0 p-3 flex items-center gap-2">
                     {product.images?.[0]?.url && (
-                      <img src={product.images[0].url} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0 border border-white/30" />
+                      <img src={cldOptimize(product.images[0].url, 72)} alt="" loading="lazy" className="w-9 h-9 rounded-lg object-cover flex-shrink-0 border border-white/30" />
                     )}
                     <div className="min-w-0">
-                      <p className="text-white text-xs font-semibold line-clamp-2 mb-1">{v.title || product.name}</p>
+                      <p className="text-white text-xs font-semibold line-clamp-2 mb-1">
+                        {v.title || product.name}
+                        {products.length > 1 && <span className="ml-1 text-white/70 font-normal">+{products.length - 1} more</span>}
+                      </p>
                       <PriceTag product={product} />
                     </div>
                   </div>
@@ -187,15 +199,15 @@ export default function ShopByVideoSlider() {
 
       {/* Lightbox — bigger video + tagged product, click-through to product page */}
       {lightbox && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setLightboxIndex(null)}>
-          <div className="absolute inset-0 bg-black/80" />
-          <div className="relative w-full max-w-sm" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto p-4 py-8" onClick={() => setLightboxIndex(null)}>
+          <div className="fixed inset-0 bg-black/80" />
+          <div className="relative w-full max-w-sm my-auto" onClick={e => e.stopPropagation()}>
             <button onClick={() => setLightboxIndex(null)} aria-label="Close"
               className="absolute -top-10 right-0 text-white/80 hover:text-white transition-colors">
               <X size={26} />
             </button>
             <div
-              className="relative rounded-2xl overflow-hidden bg-black aspect-[9/16]"
+              className="relative rounded-2xl overflow-hidden bg-black aspect-[9/16] max-h-[65vh] mx-auto"
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
             >
@@ -214,23 +226,37 @@ export default function ShopByVideoSlider() {
                 </>
               )}
             </div>
-            {lightbox.product && (
-              <Link to={`/shop/${lightbox.product.slug}`}
-                className="mt-3 flex items-center justify-between gap-3 bg-white rounded-xl p-3 hover:shadow-lg transition-shadow">
-                <div className="flex items-center gap-3 min-w-0">
-                  <img src={lightbox.product.images?.[0]?.url} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0 bg-forest-50" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-forest-900 truncate">{lightbox.product.name}</p>
-                    <div className="flex items-center gap-2">
-                      {lightbox.product.comparePrice > lightbox.product.price && (
-                        <span className="text-forest-400 text-xs line-through">₹{lightbox.product.comparePrice}</span>
-                      )}
-                      <span className="text-forest-900 text-sm font-bold">₹{lightbox.product.price}</span>
-                    </div>
-                  </div>
+            {lightbox.products?.length > 0 && (
+              <div className="relative mt-3">
+                <div ref={productRowRef} className="flex gap-3 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory pb-1">
+                  {lightbox.products.map(p => (
+                    <Link key={p._id} to={`/shop/${p.slug}`}
+                      className="snap-start flex-shrink-0 w-[42%] sm:w-40 bg-white rounded-xl p-2.5 hover:shadow-lg transition-shadow">
+                      <img src={cldOptimize(p.images?.[0]?.url, 200)} alt="" loading="lazy" className="w-full aspect-square rounded-lg object-cover bg-forest-50 mb-2" />
+                      <p className="text-sm font-semibold text-forest-900 truncate">{p.name}</p>
+                      <div className="flex items-center gap-1.5 mb-2">
+                        {p.comparePrice > p.price && (
+                          <span className="text-forest-400 text-xs line-through">₹{p.comparePrice}</span>
+                        )}
+                        <span className="text-forest-900 text-sm font-bold">₹{p.price}</span>
+                      </div>
+                      <span className="btn-gold text-xs w-full justify-center whitespace-nowrap">View <ArrowRight size={14} /></span>
+                    </Link>
+                  ))}
                 </div>
-                <span className="btn-gold text-xs flex-shrink-0 whitespace-nowrap">View Product <ArrowRight size={14} /></span>
-              </Link>
+                {lightbox.products.length > 2 && (
+                  <>
+                    <button onClick={() => slideProducts(-1)} aria-label="Previous products"
+                      className="flex absolute -left-2 top-[38%] -translate-y-1/2 z-10 bg-white hover:bg-forest-50 text-forest-900 rounded-full p-1.5 shadow-md">
+                      <ChevronLeft size={16} />
+                    </button>
+                    <button onClick={() => slideProducts(1)} aria-label="Next products"
+                      className="flex absolute -right-2 top-[38%] -translate-y-1/2 z-10 bg-white hover:bg-forest-50 text-forest-900 rounded-full p-1.5 shadow-md">
+                      <ChevronRight size={16} />
+                    </button>
+                  </>
+                )}
+              </div>
             )}
           </div>
         </div>

@@ -92,7 +92,7 @@ export default function OrdersPage() {
             <div>
               <h3 className="font-semibold text-green-800">Order Placed Successfully!</h3>
               <p className="text-green-600 text-sm mt-1">Order ID: <span className="font-mono font-bold">{successId}</span></p>
-              <p className="text-green-500 text-sm">You will receive a confirmation email shortly. Estimated delivery: 3–5 business days.</p>
+              <p className="text-green-500 text-sm">You will receive a confirmation email shortly. Estimated delivery: 5–7 business days.</p>
             </div>
           </div>
         )}

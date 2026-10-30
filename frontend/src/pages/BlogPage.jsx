@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { Clock, ArrowRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import api from '../api'
+import { cldOptimize } from '../utils/cloudinary'
 
 export default function BlogPage() {
   const [posts, setPosts] = useState(null)
@@ -46,7 +47,7 @@ export default function BlogPage() {
       <div className="max-w-6xl mx-auto px-4 py-14">
         {/* Featured post */}
         <div className="card overflow-hidden mb-12 grid md:grid-cols-2">
-          <img src={posts[0].featuredImage || posts[0].img || ''} alt={posts[0].title} className="w-full h-64 md:h-auto object-cover" />
+          <img src={cldOptimize(posts[0].featuredImage || posts[0].img || '', 700)} alt={posts[0].title} className="w-full h-64 md:h-auto object-cover" />
           <div className="p-8 flex flex-col justify-center">
             <span className="badge-gold mb-3 inline-block">{posts[0].category?.name || ''}</span>
             <h2 className="text-2xl font-bold text-forest-900 mb-3 leading-snug" style={{ fontFamily: "'PP Pangram Sans Rounded',sans-serif" }}>
@@ -67,7 +68,7 @@ export default function BlogPage() {
           {posts.slice(1).map(post => (
             <Link key={post.slug || post._id} to={`/blog/${post.slug || post._id}`} className="card group overflow-hidden block">
               <div className="overflow-hidden aspect-video">
-                <img src={post.featuredImage || post.img || ''} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                <img src={cldOptimize(post.featuredImage || post.img || '', 440)} alt={post.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
               </div>
               <div className="p-5">
                 <span className="badge-green text-xs mb-3 inline-block">{post.category?.name || ''}</span>
